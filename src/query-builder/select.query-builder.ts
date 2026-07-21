@@ -1,3 +1,4 @@
+import type { JoinDescriptor } from './interfaces/join-descriptor.js';
 import type { QueryBuilder } from './interfaces/query-builder.js';
 
 /**
@@ -23,6 +24,8 @@ export class SelectQueryBuilder implements QueryBuilder {
     #parameters: unknown[] = [];
     #select: string[] = [];
     #where: string[] = [];
+    #join: Omit<JoinDescriptor, 'parameters'>[] = [];
+    #joinParameters: unknown[][] = [];
     #limit?: number;
     #skip?: number;
     #from?: {
@@ -45,6 +48,8 @@ export class SelectQueryBuilder implements QueryBuilder {
         qb.#parameters = this.#parameters.slice();
         qb.#select = columns;
         qb.#where = this.#where.slice();
+        qb.#join = this.#join.slice();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
         qb.#skip = this.#skip;
         qb.#from = structuredClone(this.#from);
@@ -64,6 +69,49 @@ export class SelectQueryBuilder implements QueryBuilder {
         qb.#parameters = this.#parameters.slice();
         qb.#select = [ ...this.#select, ...columns ];
         qb.#where = this.#where.slice();
+        qb.#join = this.#join.slice();
+        qb.#joinParameters = this.#joinParameters.slice();
+        qb.#limit = this.#limit;
+        qb.#skip = this.#skip;
+        qb.#from = structuredClone(this.#from);
+        return qb;
+    }
+
+    /**
+     * Returns a new builder with the `JOIN` clauses replaced by the given
+     * descriptor, discarding any joins set by previous calls to
+     * {@link SelectQueryBuilder.join} or {@link SelectQueryBuilder.addJoin}.
+     *
+     * @param descriptor Join type, target table and `ON` condition.
+     */
+    join(descriptor: JoinDescriptor): SelectQueryBuilder {
+        const { parameters, ...rest } = descriptor;
+        const qb = new SelectQueryBuilder();
+        qb.#parameters = this.#parameters.slice();
+        qb.#select = this.#select.slice();
+        qb.#where = this.#where.slice();
+        qb.#join = [ rest ];
+        qb.#joinParameters = [ parameters?.slice() ?? [] ];
+        qb.#limit = this.#limit;
+        qb.#skip = this.#skip;
+        qb.#from = structuredClone(this.#from);
+        return qb;
+    }
+
+    /**
+     * Returns a new builder with the given join appended to the ones
+     * already set.
+     *
+     * @param descriptor Join type, target table and `ON` condition.
+     */
+    addJoin(descriptor: JoinDescriptor): SelectQueryBuilder {
+        const { parameters, ...rest } = descriptor;
+        const qb = new SelectQueryBuilder();
+        qb.#parameters = this.#parameters.slice();
+        qb.#select = this.#select.slice();
+        qb.#where = this.#where.slice();
+        qb.#join = [ ...this.#join, rest ];
+        qb.#joinParameters = [ ...this.#joinParameters, parameters?.slice() ?? [] ];
         qb.#limit = this.#limit;
         qb.#skip = this.#skip;
         qb.#from = structuredClone(this.#from);
@@ -82,6 +130,8 @@ export class SelectQueryBuilder implements QueryBuilder {
         qb.#parameters = this.#parameters.slice();
         qb.#select = this.#select.slice();
         qb.#where = this.#where.slice();
+        qb.#join = this.#join.slice();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
         qb.#skip = this.#skip;
         qb.#from = { target, alias };
@@ -100,6 +150,8 @@ export class SelectQueryBuilder implements QueryBuilder {
         qb.#parameters = [ ...this.#parameters, ...parameters ];
         qb.#select = this.#select.slice();
         qb.#where = [ ...this.#where, `AND ${expression}` ];
+        qb.#join = this.#join.slice();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
         qb.#skip = this.#skip;
         qb.#from = structuredClone(this.#from);
@@ -118,6 +170,8 @@ export class SelectQueryBuilder implements QueryBuilder {
         qb.#parameters = [ ...this.#parameters, ...parameters ];
         qb.#select = this.#select.slice();
         qb.#where = [ ...this.#where, `OR ${expression}` ];
+        qb.#join = this.#join.slice();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
         qb.#skip = this.#skip;
         qb.#from = structuredClone(this.#from);
@@ -137,6 +191,8 @@ export class SelectQueryBuilder implements QueryBuilder {
         qb.#parameters = parameters.slice();
         qb.#select = this.#select.slice();
         qb.#where = [ expression ];
+        qb.#join = this.#join.slice();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
         qb.#skip = this.#skip;
         qb.#from = structuredClone(this.#from);
@@ -153,6 +209,8 @@ export class SelectQueryBuilder implements QueryBuilder {
         qb.#parameters = this.#parameters.slice();
         qb.#select = this.#select.slice();
         qb.#where = this.#where.slice();
+        qb.#join = this.#join.slice();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = value;
         qb.#skip = this.#skip;
         qb.#from = structuredClone(this.#from);
@@ -169,6 +227,8 @@ export class SelectQueryBuilder implements QueryBuilder {
         qb.#parameters = this.#parameters.slice();
         qb.#select = this.#select.slice();
         qb.#where = this.#where.slice();
+        qb.#join = this.#join.slice();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
         qb.#skip = value;
         qb.#from = structuredClone(this.#from);
@@ -176,16 +236,17 @@ export class SelectQueryBuilder implements QueryBuilder {
     }
 
     /**
-     * Returns the parameters bound to the `?` placeholders of the `WHERE`
-     * clause built by {@link SelectQueryBuilder.getQuery}.
+     * Returns the parameters bound to the `?` placeholders of the `JOIN`
+     * and `WHERE` clauses built by {@link SelectQueryBuilder.getQuery}, in
+     * the order they appear in the query text.
      */
     getParameters(): unknown[] {
-        return this.#parameters.slice();
+        return [ ...this.#joinParameters.flat(), ...this.#parameters ];
     }
 
     /**
-     * Builds the `SELECT` statement, including `FROM`, `WHERE`, `LIMIT` and
-     * `SKIP` clauses for whichever of those have been set.
+     * Builds the `SELECT` statement, including `FROM`, `JOIN`, `WHERE`,
+     * `LIMIT` and `SKIP` clauses for whichever of those have been set.
      */
     getQuery(): string {
         const query = [ `SELECT`, this.#select.join(',\n') ];
@@ -194,6 +255,14 @@ export class SelectQueryBuilder implements QueryBuilder {
                 ?   `FROM [${this.#from.target}] AS [${this.#from.alias}]`
                 :   `FROM [${this.#from.target}]`
             );
+
+        for (const j of this.#join) {
+            const target = typeof j.alias === 'string'
+                ?   `[${j.target}] AS [${j.alias}]`
+                :   `[${j.target}]`;
+
+            query.push(`${j.type.toUpperCase()} JOIN ${target} ON ${j.on}`);
+        }
 
         if (this.#where.length > 0)
             query.push('WHERE', ...this.#where);

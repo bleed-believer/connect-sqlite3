@@ -82,9 +82,6 @@ export class CreateQueryBuilder implements QueryBuilder {
 
     /**
      * Builds the `CREATE TABLE` statement.
-     *
-     * If any column declares a `foreign` key, the statement is prefixed
-     * with `PRAGMA foreign_keys = ON;` and the corresponding
      * `FOREIGN KEY ... REFERENCES` clauses are appended after the columns.
      */
     getQuery(): string {
@@ -116,7 +113,6 @@ export class CreateQueryBuilder implements QueryBuilder {
             });
 
         if (fks.size > 0) {
-            query.unshift(`PRAGMA foreign_keys = ON;`);
             Array
                 .from(fks)
                 .map(([ k, v ]) => [

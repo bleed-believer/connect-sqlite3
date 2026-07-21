@@ -106,4 +106,90 @@ describe('SelectQueryBuilder', () => {
             `AND User.nick like ?`,
         ].join('\n'));
     });
+
+    it('Select from table with a single join', (t: it.TestContext) => {
+        const qb = new SelectQueryBuilder()
+            .select(
+                `User.id`,
+                `Profile.bio`,
+            )
+            .from('User')
+            .join({
+                type: 'left',
+                target: 'Profile',
+                alias: 'Profile',
+                on: 'Profile.userId = User.id AND Profile.active = ?',
+                parameters: [ 1 ],
+            });
+
+        t.assert.deepStrictEqual(qb.getParameters(), [ 1 ]);
+        t.assert.strictEqual(qb.getQuery(), [
+            `SELECT`,
+            `User.id,`,
+            `Profile.bio`,
+            `FROM [User]`,
+            `LEFT JOIN [Profile] AS [Profile] ON Profile.userId = User.id AND Profile.active = ?`,
+        ].join('\n'));
+    });
+
+    it('Select from table with multiple joins and where expression', (t: it.TestContext) => {
+        const qb = new SelectQueryBuilder()
+            .select(
+                `User.id`,
+                `Profile.bio`,
+                `Team.name`,
+            )
+            .from('User')
+            .join({
+                type: 'inner',
+                target: 'Profile',
+                on: 'Profile.userId = User.id',
+            })
+            .addJoin({
+                type: 'left',
+                target: 'Team',
+                alias: 'Team',
+                on: 'Team.id = User.teamId AND Team.active = ?',
+                parameters: [ 1 ],
+            })
+            .where('User.path != ?', '/');
+
+        t.assert.deepStrictEqual(qb.getParameters(), [ 1, '/' ]);
+        t.assert.strictEqual(qb.getQuery(), [
+            `SELECT`,
+            `User.id,`,
+            `Profile.bio,`,
+            `Team.name`,
+            `FROM [User]`,
+            `INNER JOIN [Profile] ON Profile.userId = User.id`,
+            `LEFT JOIN [Team] AS [Team] ON Team.id = User.teamId AND Team.active = ?`,
+            `WHERE`,
+            `User.path != ?`,
+        ].join('\n'));
+    });
+
+    it('addJoin replaces a previous join set by join()', (t: it.TestContext) => {
+        const qb = new SelectQueryBuilder()
+            .select(`User.id`)
+            .from('User')
+            .join({
+                type: 'inner',
+                target: 'Profile',
+                on: 'Profile.userId = User.id',
+            })
+            .addJoin({
+                type: 'left',
+                target: 'Team',
+                on: 'Team.id = User.teamId',
+            });
+
+        t.assert.deepStrictEqual(qb.getParameters(), []);
+        t.assert.strictEqual(qb.getQuery(), [
+            `SELECT`,
+            `User.id`,
+            `FROM [User]`,
+            `INNER JOIN [Profile] ON Profile.userId = User.id`,
+            `LEFT JOIN [Team] ON Team.id = User.teamId`,
+        ].join('\n'));
+    });
 });

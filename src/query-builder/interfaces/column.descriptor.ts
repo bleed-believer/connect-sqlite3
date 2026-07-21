@@ -29,7 +29,7 @@ export type ColumnDescriptor = {
         {
             primary?: false;
             /** Foreign key reference, emitted as a `FOREIGN KEY ... REFERENCES` clause. */
-            foreign: {
+            foreign?: {
                 /** Name of the referenced table. */
                 tableName: string;
                 /** Name of the referenced column. */

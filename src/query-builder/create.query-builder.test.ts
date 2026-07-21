@@ -60,7 +60,6 @@ describe('CreateQueryBuilder', () => {
 
         t.assert.deepStrictEqual(qb.getParameters(), []);
         t.assert.strictEqual(qb.getQuery(), [
-            `PRAGMA foreign_keys = ON;`,
             `CREATE TABLE [User](`,
             `[id] INTEGER PRIMARY KEY,`,
             `[userTypeId] INTEGER,`,
