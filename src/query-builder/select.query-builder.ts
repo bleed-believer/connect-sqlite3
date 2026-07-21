@@ -21,11 +21,11 @@ import type { QueryBuilder } from './interfaces/query-builder.js';
  * ```
  */
 export class SelectQueryBuilder implements QueryBuilder {
+    #joinParameters: unknown[][] = [];
     #parameters: unknown[] = [];
     #select: string[] = [];
     #where: string[] = [];
     #join: Omit<JoinDescriptor, 'parameters'>[] = [];
-    #joinParameters: unknown[][] = [];
     #limit?: number;
     #skip?: number;
     #from?: {
@@ -45,14 +45,14 @@ export class SelectQueryBuilder implements QueryBuilder {
     select(column: string, ...moreColumns: string[]): SelectQueryBuilder;
     select(...columns: [ string, ...string[] ]): SelectQueryBuilder {
         const qb = new SelectQueryBuilder();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#parameters = this.#parameters.slice();
         qb.#select = columns;
-        qb.#where = this.#where.slice();
-        qb.#join = this.#join.slice();
-        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
-        qb.#skip = this.#skip;
+        qb.#where = this.#where.slice();
         qb.#from = structuredClone(this.#from);
+        qb.#join = this.#join.slice();
+        qb.#skip = this.#skip;
         return qb;
     }
 
@@ -66,14 +66,14 @@ export class SelectQueryBuilder implements QueryBuilder {
     addSelect(column: string, ...moreColumns: string[]): SelectQueryBuilder;
     addSelect(...columns: [ string, ...string[] ]): SelectQueryBuilder {
         const qb = new SelectQueryBuilder();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#parameters = this.#parameters.slice();
         qb.#select = [ ...this.#select, ...columns ];
-        qb.#where = this.#where.slice();
-        qb.#join = this.#join.slice();
-        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
-        qb.#skip = this.#skip;
+        qb.#where = this.#where.slice();
         qb.#from = structuredClone(this.#from);
+        qb.#join = this.#join.slice();
+        qb.#skip = this.#skip;
         return qb;
     }
 
@@ -87,14 +87,14 @@ export class SelectQueryBuilder implements QueryBuilder {
     join(descriptor: JoinDescriptor): SelectQueryBuilder {
         const { parameters, ...rest } = descriptor;
         const qb = new SelectQueryBuilder();
+        qb.#joinParameters = [ parameters?.slice() ?? [] ];
         qb.#parameters = this.#parameters.slice();
         qb.#select = this.#select.slice();
-        qb.#where = this.#where.slice();
-        qb.#join = [ rest ];
-        qb.#joinParameters = [ parameters?.slice() ?? [] ];
         qb.#limit = this.#limit;
-        qb.#skip = this.#skip;
+        qb.#where = this.#where.slice();
         qb.#from = structuredClone(this.#from);
+        qb.#join = [ rest ];
+        qb.#skip = this.#skip;
         return qb;
     }
 
@@ -107,14 +107,14 @@ export class SelectQueryBuilder implements QueryBuilder {
     addJoin(descriptor: JoinDescriptor): SelectQueryBuilder {
         const { parameters, ...rest } = descriptor;
         const qb = new SelectQueryBuilder();
+        qb.#joinParameters = [ ...this.#joinParameters, parameters?.slice() ?? [] ];
         qb.#parameters = this.#parameters.slice();
         qb.#select = this.#select.slice();
-        qb.#where = this.#where.slice();
-        qb.#join = [ ...this.#join, rest ];
-        qb.#joinParameters = [ ...this.#joinParameters, parameters?.slice() ?? [] ];
         qb.#limit = this.#limit;
-        qb.#skip = this.#skip;
+        qb.#where = this.#where.slice();
         qb.#from = structuredClone(this.#from);
+        qb.#join = [ ...this.#join, rest ];
+        qb.#skip = this.#skip;
         return qb;
     }
 
@@ -127,14 +127,14 @@ export class SelectQueryBuilder implements QueryBuilder {
      */
     from(target: string, alias?: string): SelectQueryBuilder {
         const qb = new SelectQueryBuilder();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#parameters = this.#parameters.slice();
         qb.#select = this.#select.slice();
+        qb.#limit = this.#limit;
         qb.#where = this.#where.slice();
         qb.#join = this.#join.slice();
-        qb.#joinParameters = this.#joinParameters.slice();
-        qb.#limit = this.#limit;
-        qb.#skip = this.#skip;
         qb.#from = { target, alias };
+        qb.#skip = this.#skip;
         return qb;
     }
 
@@ -147,14 +147,14 @@ export class SelectQueryBuilder implements QueryBuilder {
      */
     andWhere(expression: string, ...parameters: unknown[]): SelectQueryBuilder {
         const qb = new SelectQueryBuilder();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#parameters = [ ...this.#parameters, ...parameters ];
         qb.#select = this.#select.slice();
-        qb.#where = [ ...this.#where, `AND ${expression}` ];
-        qb.#join = this.#join.slice();
-        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
-        qb.#skip = this.#skip;
+        qb.#where = [ ...this.#where, `AND ${expression}` ];
         qb.#from = structuredClone(this.#from);
+        qb.#join = this.#join.slice();
+        qb.#skip = this.#skip;
         return qb;
     }
 
@@ -168,13 +168,13 @@ export class SelectQueryBuilder implements QueryBuilder {
     orWhere(expression: string, ...parameters: unknown[]): SelectQueryBuilder {
         const qb = new SelectQueryBuilder();
         qb.#parameters = [ ...this.#parameters, ...parameters ];
-        qb.#select = this.#select.slice();
-        qb.#where = [ ...this.#where, `OR ${expression}` ];
-        qb.#join = this.#join.slice();
         qb.#joinParameters = this.#joinParameters.slice();
+        qb.#select = this.#select.slice();
         qb.#limit = this.#limit;
-        qb.#skip = this.#skip;
+        qb.#where = [ ...this.#where, `OR ${expression}` ];
         qb.#from = structuredClone(this.#from);
+        qb.#join = this.#join.slice();
+        qb.#skip = this.#skip;
         return qb;
     }
 
@@ -188,14 +188,14 @@ export class SelectQueryBuilder implements QueryBuilder {
      */
     where(expression: string, ...parameters: unknown[]): SelectQueryBuilder {
         const qb = new SelectQueryBuilder();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#parameters = parameters.slice();
         qb.#select = this.#select.slice();
-        qb.#where = [ expression ];
-        qb.#join = this.#join.slice();
-        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
-        qb.#skip = this.#skip;
+        qb.#where = [ expression ];
         qb.#from = structuredClone(this.#from);
+        qb.#join = this.#join.slice();
+        qb.#skip = this.#skip;
         return qb;
     }
 
@@ -206,14 +206,14 @@ export class SelectQueryBuilder implements QueryBuilder {
      */
     limit(value: number): SelectQueryBuilder {
         const qb = new SelectQueryBuilder();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#parameters = this.#parameters.slice();
         qb.#select = this.#select.slice();
-        qb.#where = this.#where.slice();
-        qb.#join = this.#join.slice();
-        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = value;
-        qb.#skip = this.#skip;
+        qb.#where = this.#where.slice();
         qb.#from = structuredClone(this.#from);
+        qb.#join = this.#join.slice();
+        qb.#skip = this.#skip;
         return qb;
     }
 
@@ -224,14 +224,14 @@ export class SelectQueryBuilder implements QueryBuilder {
      */
     skip(value: number): SelectQueryBuilder {
         const qb = new SelectQueryBuilder();
+        qb.#joinParameters = this.#joinParameters.slice();
         qb.#parameters = this.#parameters.slice();
         qb.#select = this.#select.slice();
-        qb.#where = this.#where.slice();
-        qb.#join = this.#join.slice();
-        qb.#joinParameters = this.#joinParameters.slice();
         qb.#limit = this.#limit;
-        qb.#skip = value;
+        qb.#where = this.#where.slice();
         qb.#from = structuredClone(this.#from);
+        qb.#join = this.#join.slice();
+        qb.#skip = value;
         return qb;
     }
 
