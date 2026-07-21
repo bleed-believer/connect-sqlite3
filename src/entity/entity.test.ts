@@ -88,15 +88,19 @@ describe('Entity', () => {
             relations: {
                 userType: true
             },
+            pagination: {
+                take: 10,
+                skip: 0
+            },
             where: {
                 path: {
-                    operator: '!=',
-                    value: '/'
+                    expression: (c: string) => `${c} != ?`,
+                    values: [ '/' ]
                 },
                 userType: {
                     code: {
-                        operator: '=',
-                        value: 'MODERATOR'
+                        expression: (c: string) => `${c} = ?`,
+                        values: [ 'MODERATOR' ]
                     }
                 }
             }
@@ -114,6 +118,8 @@ describe('Entity', () => {
             `WHERE`,
             `[User].[path] != ?`,
             `AND [UserType].[code] = ?`,
+            `LIMIT 10`,
+            `SKIP 0`,
         ].join('\n'));
     });
 });

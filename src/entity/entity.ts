@@ -1,5 +1,6 @@
 import type {
     EntityRelationDescriptor,
+    OperatorDescriptor,
     DefaultSelect,
     EntityOptions,
     FindOptions,
@@ -8,6 +9,12 @@ import type {
 import type { ColumnDescriptor, JoinDescriptor } from '../query-builder/index.js';
 
 import { CreateQueryBuilder, SelectQueryBuilder } from '../query-builder/index.js';
+
+function isOperatorDescriptor(value: unknown): value is OperatorDescriptor<unknown> {
+    return typeof value === 'object'
+        && value !== null
+        && typeof (value as { expression?: unknown }).expression === 'function';
+}
 
 export class Entity<O extends EntityOptions> {
     static relation<E extends { options: EntityOptions }>(
@@ -60,15 +67,15 @@ export class Entity<O extends EntityOptions> {
     }
 
     #buildWhereClauses(
-        where: Record<string, { operator: string; value: unknown } | Record<string, { operator: string; value: unknown }>>,
+        where: Record<string, OperatorDescriptor<unknown> | Record<string, OperatorDescriptor<unknown>>>,
         relations: Record<string, EntityRelationDescriptor<Entity<EntityOptions>>>
-    ): { expression: string; value: unknown }[] {
-        const clauses: { expression: string; value: unknown }[] = [];
+    ): { expression: string; values: unknown[] }[] {
+        const clauses: { expression: string; values: unknown[] }[] = [];
         for (const [ key, condition ] of Object.entries(where)) {
-            if ('operator' in condition) {
+            if (isOperatorDescriptor(condition)) {
                 clauses.push({
-                    expression: `[${this.#options.name}].[${key}] ${condition.operator} ?`,
-                    value: condition.value
+                    expression: condition.expression(`[${this.#options.name}].[${key}]`),
+                    values: condition.values
                 });
                 continue;
             }
@@ -79,8 +86,8 @@ export class Entity<O extends EntityOptions> {
 
             for (const [ nestedKey, nestedCondition ] of Object.entries(condition)) {
                 clauses.push({
-                    expression: `[${rel.entity.options.name}].[${nestedKey}] ${nestedCondition.operator} ?`,
-                    value: nestedCondition.value
+                    expression: nestedCondition.expression(`[${rel.entity.options.name}].[${nestedKey}]`),
+                    values: nestedCondition.values
                 });
             }
         }
@@ -185,20 +192,20 @@ export class Entity<O extends EntityOptions> {
         }
 
         const where = (options?.where ?? {}) as Record<string,
-            { operator: string; value: unknown } | Record<string, { operator: string; value: unknown }>>;
+            OperatorDescriptor<unknown> | Record<string, OperatorDescriptor<unknown>>>;
 
         const [ firstWhere, ...restWhere ] = this.#buildWhereClauses(where, relations);
         if (firstWhere) {
-            qb = qb.where(firstWhere.expression, firstWhere.value);
+            qb = qb.where(firstWhere.expression, ...firstWhere.values);
             for (const clause of restWhere)
-                qb = qb.andWhere(clause.expression, clause.value);
+                qb = qb.andWhere(clause.expression, ...clause.values);
         }
 
-        if (typeof options?.limit === 'number')
-            qb = qb.limit(options.limit);
+        if (typeof options?.pagination?.take === 'number')
+            qb = qb.limit(options.pagination.take);
 
-        if (typeof options?.skip === 'number')
-            qb = qb.skip(options.skip);
+        if (typeof options?.pagination?.skip === 'number')
+            qb = qb.skip(options.pagination.skip);
 
         const rows = database
             .prepare<unknown[], Record<string, unknown>>(qb.getQuery())

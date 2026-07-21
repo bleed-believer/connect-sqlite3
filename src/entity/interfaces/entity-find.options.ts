@@ -1,3 +1,4 @@
+import type { FindPagination } from './entity-find-pagination.descriptor.js';
 import type { FindRelations } from './entity-find-relations.descriptor.js';
 import type { FindSelect } from './entity-find-select.descriptor.js';
 import type { FindWhere } from './entity-find-where.descriptor.js';
@@ -8,6 +9,5 @@ export interface FindOptions<O extends EntityOptions> {
     select?: FindSelect<O>;
     relations?: FindRelations<O>;
     where?: FindWhere<O>;
-    limit?: number;
-    skip?: number;
+    pagination?: FindPagination;
 }
