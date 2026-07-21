@@ -1,0 +1,22 @@
+{
+  "name": "@bleed-believer/connect-sqlite3",
+  "type": "module",
+  "version": "0.0.0",
+  "scripts": {
+    "test": "node --import @bleed-believer/cli --test --"
+  },
+  "devDependencies": {
+    "@bleed-believer/cli": "^1.1.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express-session": "^1.19.0",
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "express-session": "^1.19.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true
+  }
+}
