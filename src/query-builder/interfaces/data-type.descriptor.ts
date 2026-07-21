@@ -10,6 +10,7 @@ export interface DataTypeDescriptor {
     NUMERIC:    number;
 
     BOOLEAN:    boolean;
+    DATETIME:   Date;
 
     TEXT:       string;
     CHAR:       string;

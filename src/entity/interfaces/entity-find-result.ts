@@ -1,7 +1,8 @@
-import type { DataTypeDescriptor } from '../../query-builder/index.js';
 import type { EntityColumnDescriptor } from './entity-column.descriptor.js';
-import type { RelationsOf } from './entity-relations-of.js';
+import type { DataTypeDescriptor } from '../../query-builder/index.js';
 import type { EntityOptions } from './entity.options.js';
+import type { RelationsOf } from './entity-relations-of.js';
+import type { Entity } from '../entity.js';
 
 type ColumnValue<C extends EntityColumnDescriptor> =
     C['nullable'] extends true

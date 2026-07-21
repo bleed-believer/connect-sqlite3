@@ -10,8 +10,9 @@ import type { ColumnDescriptor, QueryBuilder } from './interfaces/index.js';
  * @example
  * ```ts
  * const qb = new CreateQueryBuilder('User')
- *     .addColumn('id',   { type: 'INTEGER', primary: true })
- *     .addColumn('nick', { type: 'VARCHAR', nullable: false });
+ *     .addColumn('id',        { type: 'INTEGER', primary: true })
+ *     .addColumn('nick',      { type: 'VARCHAR', nullable: false })
+ *     .addColumn('createdAt', { type: 'DATETIME', default: () => 'CURRENT_TIMESTAMP' });
  *
  * qb.getQuery();
  * ```
@@ -56,6 +57,9 @@ export class CreateQueryBuilder implements QueryBuilder {
      * Renders a JavaScript value as a SQL literal for use in a `DEFAULT`
      * clause. Strings are quoted and escaped, dates are serialized as ISO
      * strings, and booleans are rendered as `1`/`0`.
+     *
+     * Raw SQL defaults (a `default` given as a function) bypass this method
+     * entirely — their return value is emitted verbatim.
      */
     #stringifyValue(v: unknown): string {
         switch (true) {
@@ -107,7 +111,10 @@ export class CreateQueryBuilder implements QueryBuilder {
                     fks.set(k, n.foreign);
 
                 if (typeof n.default !== 'undefined')
-                    line.push('DEFAULT', this.#stringifyValue(n.default));
+                    line.push('DEFAULT', typeof n.default === 'function'
+                        ?   n.default()
+                        :   this.#stringifyValue(n.default)
+                    );
 
                 return line.join(' ');
             });

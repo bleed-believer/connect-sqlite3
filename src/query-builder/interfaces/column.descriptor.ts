@@ -13,9 +13,16 @@ import type { DataType } from './data-type.js';
 export type ColumnDescriptor = {
     [K in DataType]: {
         /** SQLite type name used for the `CREATE TABLE` column definition. */
-        type: DataType;
-        /** Default value, emitted as a `DEFAULT` clause. */
-        default?: DataTypeDescriptor[K];
+        type: K;
+        /**
+         * Default value, emitted as a `DEFAULT` clause.
+         *
+         * A plain value is rendered as an escaped SQL literal. A function
+         * may be passed instead to emit a raw SQL expression verbatim
+         * (e.g. `() => 'CURRENT_TIMESTAMP'`) — its return value is written
+         * as-is, without quoting or escaping.
+         */
+        default?: DataTypeDescriptor[K] | (() => string);
         /** Whether the column accepts `NULL`. Omit to leave it unspecified. */
         nullable?: boolean;
         /** Whether the column auto-increments (only meaningful on an `INTEGER` primary key). */

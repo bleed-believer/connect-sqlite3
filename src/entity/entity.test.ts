@@ -17,7 +17,8 @@ describe('Entity', () => {
             id:         { type: 'INTEGER', primary: true },
             nick:       { type: 'VARCHAR' },
             pass:       { type: 'VARCHAR' },
-            path:       { type: 'VARCHAR', default: '/' },
+            path:       { type: 'VARCHAR',  default: '/' },
+            createdAt:  { type: 'DATETIME', default: () => 'CURRENT_TIMESTAMP' },
         },
         relations: {
             userType: Entity.relation(userTypeEntity, {
@@ -55,6 +56,7 @@ describe('Entity', () => {
                 `[nick] VARCHAR,`,
                 `[pass] VARCHAR,`,
                 `[path] VARCHAR DEFAULT '/',`,
+                `[createdAt] DATETIME DEFAULT CURRENT_TIMESTAMP,`,
                 `FOREIGN KEY (userTypeId) REFERENCES [UserType]([id])`,
                 `)`,
             ].join('\n'),
@@ -68,15 +70,34 @@ describe('Entity', () => {
             prepare(q: string) {
                 query = q;
                 return {
-                    all: (...p: unknown[]) => {
+                    all(...p: unknown[]) {
                         parameters = p;
-                        return [];
+                        return [
+                            {
+                                'id': 1,
+                                'nick': 'foo',
+                                'userType.id': 9,
+                                'userType.code': 'MODERATOR',
+                            },
+                            {
+                                'id': 55,
+                                'nick': 'lol',
+                                'userType.id': 9,
+                                'userType.code': 'MODERATOR',
+                            },
+                            {
+                                'id': 66,
+                                'nick': 'joder',
+                                'userType.id': 9,
+                                'userType.code': 'MODERATOR',
+                            }
+                        ] as any;
                     }
                 };
             }
         };
 
-        userEntity.find(database, {
+        const data = userEntity.find(database, {
             select: {
                 id: true,
                 nick: true,
@@ -121,5 +142,32 @@ describe('Entity', () => {
             `LIMIT 10`,
             `SKIP 0`,
         ].join('\n'));
+
+        t.assert.deepStrictEqual(data, [
+            {
+                id: 1,
+                nick: 'foo',
+                userType: {
+                    id: 9,
+                    code: 'MODERATOR'
+                }
+            },
+            {
+                id: 55,
+                nick: 'lol',
+                userType: {
+                    id: 9,
+                    code: 'MODERATOR'
+                }
+            },
+            {
+                id: 66,
+                nick: 'joder',
+                userType: {
+                    id: 9,
+                    code: 'MODERATOR'
+                }
+            }
+        ]);
     });
 });

@@ -50,6 +50,20 @@ describe('CreateQueryBuilder', () => {
         ].join('\n'));
     });
 
+    it('Create a table with: raw SQL default value', (t: it.TestContext) => {
+        const qb = new CreateQueryBuilder('User')
+            .addColumn('id',            { type: 'INTEGER', primary: true })
+            .addColumn('createdAt',     { type: 'DATETIME', default: () => 'CURRENT_TIMESTAMP' });
+
+        t.assert.deepStrictEqual(qb.getParameters(), []);
+        t.assert.strictEqual(qb.getQuery(), [
+            `CREATE TABLE [User](`,
+            `[id] INTEGER PRIMARY KEY,`,
+            `[createdAt] DATETIME DEFAULT CURRENT_TIMESTAMP`,
+            `)`,
+        ].join('\n'));
+    });
+
     it('Create a table with: primary key; default value; foreign key', (t: it.TestContext) => {
         const qb = new CreateQueryBuilder('User')
             .addColumn('id',            { type: 'INTEGER', primary: true })

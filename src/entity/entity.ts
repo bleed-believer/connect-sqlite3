@@ -1,10 +1,10 @@
 import type {
     EntityRelationDescriptor,
     OperatorDescriptor,
-    DefaultSelect,
     EntityOptions,
     FindOptions,
-    FindResult
+    FindResult,
+    FindSelect
 } from './interfaces/index.js';
 import type { ColumnDescriptor, JoinDescriptor } from '../query-builder/index.js';
 
@@ -157,14 +157,14 @@ export class Entity<O extends EntityOptions> {
         return this;
     }
 
-    find(
+    find<Select extends FindSelect<O> = FindSelect<O>>(
         database: {
             prepare<P extends unknown[], T>(q: string): {
                 all(...p: P): T[];
             };
         },
-        options?: FindOptions<O>
-    ): FindResult<O, DefaultSelect<O>>[] {
+        options?: Omit<FindOptions<O>, 'select'> & { select?: Select }
+    ): FindResult<O, Select>[] {
         const relations = (this.#options.relations ?? {}) as
             Record<string, EntityRelationDescriptor<Entity<EntityOptions>>>;
 
@@ -211,6 +211,6 @@ export class Entity<O extends EntityOptions> {
             .prepare<unknown[], Record<string, unknown>>(qb.getQuery())
             .all(...qb.getParameters());
 
-        return rows.map(row => this.#unflattenRow(row)) as FindResult<O, DefaultSelect<O>>[];
+        return rows.map(row => this.#unflattenRow(row)) as FindResult<O, Select>[];
     }
 }
