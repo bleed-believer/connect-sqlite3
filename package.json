@@ -2,7 +2,19 @@
   "name": "@bleed-believer/connect-sqlite3",
   "type": "module",
   "version": "0.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "bleed build --config tsconfig.build.json && tsc -p tsconfig.build.json",
     "test": "node --import @bleed-believer/cli --test --"
   },
   "devDependencies": {
