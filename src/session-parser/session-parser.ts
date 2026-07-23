@@ -62,6 +62,7 @@ export class SessionParser {
         switch (v.secure) {
             case 'auto': {
                 cookie.secure = 'auto';
+                break;
             }
 
             case 'true':

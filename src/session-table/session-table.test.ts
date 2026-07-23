@@ -76,5 +76,32 @@ describe(
             sessionTable.clearExpired();
             t.assert.strictEqual(sessionTable.exists('ñee'), false);
         });
+
+        it('Purgue a session that expired earlier today', (t: it.TestContext) => {
+            const sessionTable = new SessionTable(path, name);
+            const json = { today: true };
+            const cookie = new Cookie();
+            cookie.expires = new Date(Date.now() - 1_000);
+
+            sessionTable.insert('today-expired', { json, cookie });
+            t.assert.strictEqual(sessionTable.exists('today-expired'), true);
+
+            sessionTable.clearExpired();
+            t.assert.strictEqual(sessionTable.exists('today-expired'), false);
+        });
+
+        it('getAll() excludes a session that expired earlier today', (t: it.TestContext) => {
+            const sessionTable = new SessionTable(path, name);
+            const json = { today: true };
+            const cookie = new Cookie();
+            cookie.expires = new Date(Date.now() - 1_000);
+
+            sessionTable.insert('today-expired-2', { json, cookie });
+            const all = sessionTable.getAll();
+            t.assert.strictEqual(
+                all.some(s => s.json['today'] === true),
+                false
+            );
+        });
     }
 );

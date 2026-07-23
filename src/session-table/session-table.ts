@@ -3,6 +3,7 @@ import type { DatabaseObject } from './interfaces/index.js';
 import type { SessionData } from 'express-session';
 import type { Options } from 'better-sqlite3';
 
+import { sanitizeTableName } from './sanitize-table-name.js';
 import { SessionParser } from '../session-parser/index.js';
 import Database from 'better-sqlite3';
 
@@ -22,7 +23,7 @@ export class SessionTable {
      * @param options - Optional `better-sqlite3` connection options.
      */
     constructor(target: string | Buffer, tableName: string, options?: Options) {
-        this.#tableName = tableName;
+        this.#tableName = sanitizeTableName(tableName);
         this.#database = new Database(target, options);
     }
 
@@ -56,7 +57,7 @@ export class SessionTable {
         const query = `--sql
         DELETE FROM [${this.#tableName}]
         WHERE
-            [${this.#tableName}].[expires] <= CURRENT_TIMESTAMP`;
+            datetime([${this.#tableName}].[expires]) <= datetime('now')`;
 
         this.#database
             .prepare(query)
@@ -149,7 +150,7 @@ export class SessionTable {
         FROM [${this.#tableName}]
         
         WHERE
-            [${this.#tableName}].[expires] > CURRENT_TIMESTAMP`;
+            datetime([${this.#tableName}].[expires]) > datetime('now')`;
 
         return this.#database
             .prepare<[], SerializedSession>(query)
