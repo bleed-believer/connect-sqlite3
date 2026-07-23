@@ -30,8 +30,6 @@ export class SQLite3Store extends Store {
      */
     all(callback: (err: any, obj?: SessionData[] | null) => void): void {
         try {
-            this.#sessionTable.createTable();
-            this.#sessionTable.clearExpired();
             const data = this.#sessionTable.getAll();
             callback(null, data);
         } catch (err) {
@@ -51,7 +49,6 @@ export class SQLite3Store extends Store {
      */
     clear(callback?: (err?: any) => void): void {
         try {
-            this.#sessionTable.createTable();
             this.#sessionTable.clear();
             callback?.(null);
         } catch (err) {
@@ -76,12 +73,7 @@ export class SQLite3Store extends Store {
      */
     touch(sid: string, session: SessionData, callback?: (err?: any) => void): void {
         try {
-            this.#sessionTable.createTable();
-            this.#sessionTable.clearExpired();
-            if (this.#sessionTable.exists(sid)) {
-                this.#sessionTable.update(sid, session);
-            }
-
+            this.#sessionTable.touch(sid, session);
             callback?.(null);
         } catch (err) {
             if (callback) {
@@ -102,9 +94,6 @@ export class SQLite3Store extends Store {
      */
     get(sid: string, callback: (err: any, session?: SessionData | null) => void): void {
         try {
-            this.#sessionTable.createTable();
-            this.#sessionTable.clearExpired();
-
             const session = this.#sessionTable.get(sid);
             callback(null, session);
         } catch (err) {
@@ -128,14 +117,7 @@ export class SQLite3Store extends Store {
      */
     set(sid: string, session: SessionData, callback?: (err?: any) => void): void {
         try {
-            this.#sessionTable.createTable();
-            this.#sessionTable.clearExpired();
-            if (this.#sessionTable.exists(sid)) {
-                this.#sessionTable.update(sid, session);
-            } else {
-                this.#sessionTable.insert(sid, session);
-            }
-
+            this.#sessionTable.set(sid, session);
             callback?.(null);
         } catch (err) {
             if (callback) {
@@ -155,8 +137,6 @@ export class SQLite3Store extends Store {
      */
     length(callback: (err: any, length?: number) => void): void {
         try {
-            this.#sessionTable.createTable();
-            this.#sessionTable.clearExpired();
             const length = this.#sessionTable.getLength();
             callback?.(null, length);
         } catch (err) {
@@ -179,8 +159,6 @@ export class SQLite3Store extends Store {
      */
     destroy(sid: string, callback?: (err?: any) => void): void {
         try {
-            this.#sessionTable.createTable();
-            this.#sessionTable.clearExpired();
             this.#sessionTable.delete(sid);
             callback?.(null);
         } catch (err) {
