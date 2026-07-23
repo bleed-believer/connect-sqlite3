@@ -43,12 +43,12 @@ The underlying SQLite table (and database file) is created automatically on firs
 ## `SQLite3Store`
 
 ```ts
-new SQLite3Store(filename, tableName, options?)
+new SQLite3Store(target, tableName, options?)
 ```
 
 | Parameter    | Type                   | Description |
 | ------------ | ---------------------- | ----------- |
-| `filename`   | `string \| Buffer`     | Path to the SQLite database file (or an in-memory buffer), forwarded to `better-sqlite3`. |
+| `target`     | `string \| Buffer`     | Path to the SQLite database file (or an in-memory buffer), forwarded to `better-sqlite3`. |
 | `tableName`  | `string`               | Name of the table used to store sessions. |
 | `options`    | `better-sqlite3.Options` (optional) | Connection options forwarded to `better-sqlite3`. |
 
@@ -57,12 +57,12 @@ new SQLite3Store(filename, tableName, options?)
 ### Behavior notes
 
 - **`touch(sid, session, callback)`** only refreshes a session that already exists; it never creates one.
-- **`get(sid, callback)`** purges expired sessions before performing the lookup.
-- Expiration is driven by the session cookie's `maxAge`/`expires`; a session with no expiry never gets swept by `get`'s cleanup pass.
+- Every method (`get`, `set`, `touch`, `destroy`, `all`, `length`) purges expired sessions before performing its own operation. `clear` doesn't need this pass since it wipes the table itself.
+- Expiration is driven by the session cookie's `maxAge`/`expires`; a session with no expiry never gets swept by the cleanup pass.
 
 ## Development
 
 ```bash
-npm test    # run the test suite (node:test)
-npm run build   # transpile to dist/ and emit type declarations
+node --run test    # run the test suite (node:test)
+node --run build   # transpile to dist/ and emit type declarations
 ```

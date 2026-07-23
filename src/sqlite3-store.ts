@@ -6,14 +6,14 @@ import { Store } from 'express-session';
 /**
  * `express-session` compatible {@link Store} backed by a SQLite table via
  * `better-sqlite3`. Each call lazily ensures the underlying table exists
- * before performing its operation.
+ * and purges expired sessions before performing its operation.
  */
 export class SQLite3Store extends Store {
     #sessionTable: SessionTable;
 
     /**
      * @param args - Forwarded as-is to the {@link SessionTable} constructor
-     * (database filename/buffer, table name, and optional `better-sqlite3`
+     * (database target path/buffer, table name, and optional `better-sqlite3`
      * connection options).
      */
     constructor(...args: ConstructorParameters<typeof SessionTable>) {
@@ -22,7 +22,8 @@ export class SQLite3Store extends Store {
     }
 
     /**
-     * Returns every stored session.
+     * Returns every stored session. As a side effect, expired sessions are
+     * purged before the lookup runs.
      *
      * @param callback - Called with an error, or with all session objects
      * on success.
@@ -30,6 +31,7 @@ export class SQLite3Store extends Store {
     all(callback: (err: any, obj?: SessionData[] | null) => void): void {
         try {
             this.#sessionTable.createTable();
+            this.#sessionTable.clearExpired();
             const data = this.#sessionTable.getAll();
             callback(null, data);
         } catch (err) {
@@ -64,7 +66,8 @@ export class SQLite3Store extends Store {
     /**
      * Refreshes an existing session's data, e.g. to bump its expiration.
      * A no-op when no session with the given `sid` exists — it is never
-     * created.
+     * created. As a side effect, expired sessions are purged before the
+     * refresh runs.
      *
      * @param sid - The session id to refresh.
      * @param session - The session data to persist over the existing row.
@@ -74,6 +77,7 @@ export class SQLite3Store extends Store {
     touch(sid: string, session: SessionData, callback?: (err?: any) => void): void {
         try {
             this.#sessionTable.createTable();
+            this.#sessionTable.clearExpired();
             if (this.#sessionTable.exists(sid)) {
                 this.#sessionTable.update(sid, session);
             }
@@ -114,7 +118,8 @@ export class SQLite3Store extends Store {
 
     /**
      * Stores a session, inserting it if it doesn't exist yet or updating
-     * it in place otherwise.
+     * it in place otherwise. As a side effect, expired sessions are purged
+     * before the operation runs.
      *
      * @param sid - The session id to store.
      * @param session - The session data to persist.
@@ -124,6 +129,7 @@ export class SQLite3Store extends Store {
     set(sid: string, session: SessionData, callback?: (err?: any) => void): void {
         try {
             this.#sessionTable.createTable();
+            this.#sessionTable.clearExpired();
             if (this.#sessionTable.exists(sid)) {
                 this.#sessionTable.update(sid, session);
             } else {
@@ -141,13 +147,16 @@ export class SQLite3Store extends Store {
     }
 
     /**
-     * Counts every stored session.
+     * Counts every stored session. As a side effect, expired sessions are
+     * purged before the count runs.
      *
      * @param callback - Called with an error, or with the total number of
      * sessions on success.
      */
     length(callback: (err: any, length?: number) => void): void {
         try {
+            this.#sessionTable.createTable();
+            this.#sessionTable.clearExpired();
             const length = this.#sessionTable.getLength();
             callback?.(null, length);
         } catch (err) {
@@ -161,7 +170,8 @@ export class SQLite3Store extends Store {
 
     /**
      * Deletes a single session by its id. A no-op when no session with
-     * that `sid` exists.
+     * that `sid` exists. As a side effect, expired sessions are purged
+     * before the deletion runs.
      *
      * @param sid - The session id to delete.
      * @param callback - Called with an error, if any, once the operation
@@ -170,6 +180,7 @@ export class SQLite3Store extends Store {
     destroy(sid: string, callback?: (err?: any) => void): void {
         try {
             this.#sessionTable.createTable();
+            this.#sessionTable.clearExpired();
             this.#sessionTable.delete(sid);
             callback?.(null);
         } catch (err) {

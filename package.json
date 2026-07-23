@@ -2,6 +2,25 @@
   "name": "@bleed-believer/connect-sqlite3",
   "type": "module",
   "version": "0.0.0",
+  "description": "A SQLite-backed session store for express-session, built on top of better-sqlite3.",
+  "author": "sleep-written",
+  "license": "MIT",
+  "homepage": "https://github.com/bleed-believer/connect-sqlite3#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bleed-believer/connect-sqlite3.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bleed-believer/connect-sqlite3/issues"
+  },
+  "keywords": [
+    "express-session",
+    "session",
+    "session-store",
+    "sqlite",
+    "sqlite3",
+    "better-sqlite3"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -13,8 +32,14 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "bleed build --config tsconfig.build.json && tsc -p tsconfig.build.json",
+    "build:clean": "rm -rf ./dist",
+    "build:bleed": "bleed build --config ./tsconfig.build.json",
+    "build:.d.ts": "tsc --project ./tsconfig.build.json",
+    "build": "node --run build:clean && node --run build:bleed && node --run build:.d.ts",
     "test": "node --import @bleed-believer/cli --test --"
   },
   "devDependencies": {
@@ -22,9 +47,11 @@
     "@types/better-sqlite3": "^7.0.0",
     "@types/express-session": "^1.0.0",
     "@types/node": "^26.0.0",
+    "better-sqlite3": "^13.0.0",
+    "express-session": "^1.0.0",
     "typescript": "^7.0.0"
   },
-  "dependencies": {
+  "peerDependencies": {
     "better-sqlite3": "^13.0.0",
     "express-session": "^1.0.0"
   },

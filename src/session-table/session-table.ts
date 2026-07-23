@@ -16,14 +16,14 @@ export class SessionTable {
     #database: DatabaseObject;
 
     /**
-     * @param filename - Path to the SQLite database file (or a `Buffer`),
+     * @param target - Path to the SQLite database file (or a `Buffer`),
      * forwarded to `better-sqlite3`'s `Database` constructor.
      * @param tableName - Name of the table used to store sessions.
      * @param options - Optional `better-sqlite3` connection options.
      */
-    constructor(filename: string | Buffer, tableName: string, options?: Options) {
+    constructor(target: string | Buffer, tableName: string, options?: Options) {
         this.#tableName = tableName;
-        this.#database = new Database(filename, options);
+        this.#database = new Database(target, options);
     }
 
     /**
