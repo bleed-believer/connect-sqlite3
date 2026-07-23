@@ -56,6 +56,7 @@ describe(
                     null,
                     null,
                     null,
+                    30_000,
                     'k666',
                 );
 
@@ -64,7 +65,7 @@ describe(
                     `--sql
                     SELECT
                         *
-                    
+
                     FROM [${name}]`
                 )
                 .get();
@@ -80,7 +81,8 @@ describe(
                 httpOnly: 1,
                 sameSite: null,
                 priority: null,
-                partitioned: null
+                partitioned: null,
+                originalMaxAge: 30_000
             });
         });
 
@@ -101,6 +103,7 @@ describe(
                     null,
                     null,
                     null,
+                    60_000,
                     'k666',
                 );
 
@@ -109,9 +112,9 @@ describe(
                     `--sql
                     SELECT
                         *
-                    
+
                     FROM [${name}]
-                    
+
                     WHERE
                         [${name}].sid = ?`
                 )
@@ -128,7 +131,8 @@ describe(
                 httpOnly: 1,
                 sameSite: null,
                 priority: null,
-                partitioned: null
+                partitioned: null,
+                originalMaxAge: 60_000
             });
         });
 
@@ -150,7 +154,8 @@ describe(
                 httpOnly: 1,
                 sameSite: null,
                 priority: null,
-                partitioned: null
+                partitioned: null,
+                originalMaxAge: 60_000
             });
         });
 
@@ -185,21 +190,21 @@ describe(
                 .insertStatement()
                 .run(
                     '/', JSON.stringify({ foo: 'future' }), null, null, null,
-                    future.toISOString(), 1, null, null, null, 'future',
+                    future.toISOString(), 1, null, null, null, null, 'future',
                 );
 
             session
                 .insertStatement()
                 .run(
                     '/', JSON.stringify({ foo: 'expired' }), null, null, null,
-                    past.toISOString(), 1, null, null, null, 'expired',
+                    past.toISOString(), 1, null, null, null, null, 'expired',
                 );
 
             session
                 .insertStatement()
                 .run(
                     '/', JSON.stringify({ foo: 'forever' }), null, null, null,
-                    null, 1, null, null, null, 'forever',
+                    null, 1, null, null, null, null, 'forever',
                 );
 
             const jsons = session

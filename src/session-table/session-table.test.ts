@@ -125,5 +125,29 @@ describe(
             t.assert.strictEqual(stored?.cookie.partitioned, true);
             t.assert.strictEqual(stored?.cookie.priority, 'high');
         });
+
+        it('round-trips originalMaxAge so a reloaded session still touches for the full window', (t: it.TestContext) => {
+            const sessionTable = new SessionTable(path, name);
+            const json = { rolling: true };
+            const cookie = new Cookie();
+            cookie.maxAge = 60_000;
+
+            sessionTable.set('rolling-cookie', { json, cookie });
+
+            const stored = sessionTable.get('rolling-cookie');
+            t.assert.strictEqual(stored?.cookie.originalMaxAge, 60_000);
+        });
+
+        it('set() defaults a missing json payload to {} instead of throwing', (t: it.TestContext) => {
+            const sessionTable = new SessionTable(path, name);
+            const cookie = new Cookie();
+
+            t.assert.doesNotThrow(() => {
+                sessionTable.set('no-json', { cookie } as any);
+            });
+
+            const stored = sessionTable.get('no-json');
+            t.assert.deepStrictEqual(stored?.json, {});
+        });
     }
 );

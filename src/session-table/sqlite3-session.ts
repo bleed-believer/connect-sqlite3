@@ -29,7 +29,8 @@ export class SQLite3Session {
                 [httpOnly]      TINYINT     NULL,
                 [sameSite]      VARCHAR     NULL,
                 [priority]      VARCHAR     NULL,
-                [partitioned]   TINYINT     NULL
+                [partitioned]   TINYINT     NULL,
+                [originalMaxAge] BIGINT     NULL
             )`
         );
     }
@@ -83,7 +84,8 @@ export class SQLite3Session {
                 [${this.#tableName}].[httpOnly],
                 [${this.#tableName}].[sameSite],
                 [${this.#tableName}].[priority],
-                [${this.#tableName}].[partitioned]
+                [${this.#tableName}].[partitioned],
+                [${this.#tableName}].[originalMaxAge]
 
             FROM [${this.#tableName}]
 
@@ -123,7 +125,8 @@ export class SQLite3Session {
                 [${this.#tableName}].[httpOnly],
                 [${this.#tableName}].[sameSite],
                 [${this.#tableName}].[priority],
-                [${this.#tableName}].[partitioned]
+                [${this.#tableName}].[partitioned],
+                [${this.#tableName}].[originalMaxAge]
 
             FROM [${this.#tableName}]
 
@@ -144,6 +147,7 @@ export class SQLite3Session {
             sameSite:       SerializedSession['sameSite'],
             priority:       SerializedSession['priority'],
             partitioned:    SerializedSession['partitioned'],
+            originalMaxAge: SerializedSession['originalMaxAge'],
             sid:            string,
         ],
         void
@@ -160,7 +164,8 @@ export class SQLite3Session {
                 [httpOnly]      = ?,
                 [sameSite]      = ?,
                 [priority]      = ?,
-                [partitioned]   = ?
+                [partitioned]   = ?,
+                [originalMaxAge] = ?
 
             WHERE
                 [sid] = ?`
@@ -179,6 +184,7 @@ export class SQLite3Session {
             sameSite:       SerializedSession['sameSite'],
             priority:       SerializedSession['priority'],
             partitioned:    SerializedSession['partitioned'],
+            originalMaxAge: SerializedSession['originalMaxAge'],
             sid:            string,
         ],
         void
@@ -196,10 +202,11 @@ export class SQLite3Session {
                 [sameSite],
                 [priority],
                 [partitioned],
+                [originalMaxAge],
                 [sid]
             ) VALUES (
                 ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?
             )`
         );
     }

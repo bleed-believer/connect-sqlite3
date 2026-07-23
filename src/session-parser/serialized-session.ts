@@ -25,4 +25,13 @@ export interface SerializedSession {
     partitioned: number | null;
     /** Cookie `priority` value (`'low'`, `'medium'`, `'high'`), or `null` when unset. */
     priority: string | null;
+    /**
+     * Cookie `originalMaxAge`, in milliseconds, or `null` when unset.
+     * Persisted separately from `expires` because `express-session`'s
+     * `Cookie.expires` setter recomputes `originalMaxAge` from the
+     * remaining time-to-live as a side effect, so it can't be derived
+     * from `expires` alone on every reload without shrinking on each
+     * touch.
+     */
+    originalMaxAge: number | null;
 }

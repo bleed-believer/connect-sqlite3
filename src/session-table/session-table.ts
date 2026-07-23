@@ -1,5 +1,3 @@
-import type { SerializedSession } from '../session-parser/index.js';
-import type { DatabaseObject } from './interfaces/index.js';
 import type { SessionData } from 'express-session';
 import type { Options } from 'better-sqlite3';
 
@@ -74,6 +72,7 @@ export class SessionTable {
             raw.sameSite,
             raw.priority,
             raw.partitioned,
+            raw.originalMaxAge,
             sid
         ] as const;
 
@@ -131,6 +130,7 @@ export class SessionTable {
                     raw.sameSite,
                     raw.priority,
                     raw.partitioned,
+                    raw.originalMaxAge,
                     sid
                 );
             }

@@ -27,8 +27,15 @@ describe('SessionParser', () => {
             httpOnly: 1,
             sameSite: 'lax',
             partitioned: 1,
-            priority: 'high'
+            priority: 'high',
+            originalMaxAge: cookie.originalMaxAge
         });
+    });
+
+    it('SessionParser.serialize defaults a missing json payload to {}', (t: it.TestContext) => {
+        const cookie = new Cookie();
+        const v = SessionParser.serialize({ cookie } as any);
+        t.assert.strictEqual(v.json, '{}');
     });
 
     it('SessionParser.parse', (t: it.TestContext) => {
@@ -43,7 +50,8 @@ describe('SessionParser', () => {
             httpOnly: 1,
             sameSite: 'lax',
             partitioned: 1,
-            priority: 'high'
+            priority: 'high',
+            originalMaxAge: 30_000
         });
 
         t.assert.deepStrictEqual(json, { foo: 'bar' });
@@ -56,6 +64,26 @@ describe('SessionParser', () => {
         t.assert.strictEqual(cookie.sameSite, 'lax');
         t.assert.strictEqual(cookie.partitioned, true);
         t.assert.strictEqual(cookie.priority, 'high');
+        t.assert.strictEqual(cookie.originalMaxAge, 30_000);
+    });
+
+    it('round-trips originalMaxAge so touch() extends expires by the full window', (t: it.TestContext) => {
+        const cookie = new Cookie();
+        cookie.maxAge = 30_000;
+
+        const serialized = SessionParser.serialize({ cookie, json: {} });
+        t.assert.strictEqual(serialized.originalMaxAge, 30_000);
+
+        // Simulate time passing before the session is read back: the
+        // persisted `expires` is unchanged, but `originalMaxAge` must
+        // survive the round-trip unshrunk.
+        const { cookie: parsed } = SessionParser.parse(serialized);
+        t.assert.strictEqual(parsed.originalMaxAge, 30_000);
+
+        // Emulate express-session's `Session.prototype.touch()`.
+        const before = parsed.expires!.getTime();
+        parsed.maxAge = parsed.originalMaxAge!;
+        t.assert.ok(parsed.expires!.getTime() >= before);
     });
 
     it('round-trips a boolean sameSite value', (t: it.TestContext) => {

@@ -18,7 +18,7 @@ export class SessionParser {
      */
     static serialize(v: SessionData): SerializedSession {
         return {
-            json: JSON.stringify(v.json),
+            json: JSON.stringify(v.json ?? {}),
             path: v.cookie.path ?? null,
             domain: v.cookie.domain ?? null,
             signed: typeof v.cookie.signed === 'boolean'
@@ -39,7 +39,10 @@ export class SessionParser {
             partitioned: typeof v.cookie.partitioned === 'boolean'
             ?   v.cookie.partitioned ? 1 : 0
             :   null,
-            priority: v.cookie.priority ?? null
+            priority: v.cookie.priority ?? null,
+            originalMaxAge: typeof v.cookie.originalMaxAge === 'number'
+            ?   v.cookie.originalMaxAge
+            :   null
         };
     }
 
@@ -78,6 +81,13 @@ export class SessionParser {
 
         if (typeof v.expires === 'string')
             cookie.expires = new Date(v.expires);
+
+        // Must run after `cookie.expires` is assigned above: the `expires`
+        // setter recomputes `originalMaxAge` from the remaining
+        // time-to-live as a side effect, which this overwrites with the
+        // actual persisted value.
+        if (typeof v.originalMaxAge === 'number')
+            cookie.originalMaxAge = v.originalMaxAge;
 
         if (typeof v.httpOnly === 'number')
             cookie.httpOnly = v.httpOnly === 1;
