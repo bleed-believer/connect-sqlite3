@@ -35,7 +35,11 @@ export class SessionParser {
             :   null,
             sameSite: typeof v.cookie.sameSite === 'boolean'
             ?   JSON.stringify(v.cookie.sameSite)
-            :   v.cookie.sameSite ?? null
+            :   v.cookie.sameSite ?? null,
+            partitioned: typeof v.cookie.partitioned === 'boolean'
+            ?   v.cookie.partitioned ? 1 : 0
+            :   null,
+            priority: v.cookie.priority ?? null
         };
     }
 
@@ -89,6 +93,18 @@ export class SessionParser {
             case 'true':
             case 'false': {
                 cookie.sameSite = JSON.parse(v.sameSite);
+                break;
+            }
+        }
+
+        if (typeof v.partitioned === 'number')
+            cookie.partitioned = v.partitioned === 1;
+
+        switch (v.priority) {
+            case 'low':
+            case 'medium':
+            case 'high': {
+                cookie.priority = v.priority;
                 break;
             }
         }

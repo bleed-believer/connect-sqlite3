@@ -116,5 +116,19 @@ describe(
                 true
             );
         });
+
+        it('round-trips the partitioned and priority cookie attributes', (t: it.TestContext) => {
+            const sessionTable = new SessionTable(path, name);
+            const json = { chips: true };
+            const cookie = new Cookie();
+            cookie.partitioned = true;
+            cookie.priority = 'high';
+
+            sessionTable.insert('chips-cookie', { json, cookie });
+
+            const stored = sessionTable.get('chips-cookie');
+            t.assert.strictEqual(stored?.cookie.partitioned, true);
+            t.assert.strictEqual(stored?.cookie.priority, 'high');
+        });
     }
 );

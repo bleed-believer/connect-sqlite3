@@ -9,6 +9,8 @@ describe('SessionParser', () => {
         cookie.secure = true;
         cookie.expires = new Date(2026, 6, 6);
         cookie.sameSite = 'lax';
+        cookie.partitioned = true;
+        cookie.priority = 'high';
 
         const v = SessionParser.serialize({
             cookie,
@@ -23,7 +25,9 @@ describe('SessionParser', () => {
             secure: 'true',
             expires: cookie.expires.toISOString(),
             httpOnly: 1,
-            sameSite: 'lax'
+            sameSite: 'lax',
+            partitioned: 1,
+            priority: 'high'
         });
     });
 
@@ -37,7 +41,9 @@ describe('SessionParser', () => {
             secure: 'true',
             expires: expires.toISOString(),
             httpOnly: 1,
-            sameSite: 'lax'
+            sameSite: 'lax',
+            partitioned: 1,
+            priority: 'high'
         });
 
         t.assert.deepStrictEqual(json, { foo: 'bar' });
@@ -48,6 +54,8 @@ describe('SessionParser', () => {
         t.assert.strictEqual(cookie.expires?.getTime(), expires.getTime());
         t.assert.strictEqual(cookie.httpOnly, true);
         t.assert.strictEqual(cookie.sameSite, 'lax');
+        t.assert.strictEqual(cookie.partitioned, true);
+        t.assert.strictEqual(cookie.priority, 'high');
     });
 
     it('round-trips a boolean sameSite value', (t: it.TestContext) => {

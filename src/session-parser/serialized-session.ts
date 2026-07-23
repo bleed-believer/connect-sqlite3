@@ -21,4 +21,8 @@ export interface SerializedSession {
     httpOnly: number | null;
     /** Cookie `sameSite` value, stored as its string/boolean JSON form, or `null` when unset. */
     sameSite: string | null;
+    /** Cookie `partitioned` flag, stored as `0`/`1`, or `null` when unset. */
+    partitioned: number | null;
+    /** Cookie `priority` value (`'low'`, `'medium'`, `'high'`), or `null` when unset. */
+    priority: string | null;
 }

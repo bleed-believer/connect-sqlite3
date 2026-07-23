@@ -41,7 +41,9 @@ export class SessionTable {
             [secure]    VARCHAR     NULL,
             [expires]   VARCHAR     NULL,
             [httpOnly]  TINYINT     NULL,
-            [sameSite]  VARCHAR     NULL
+            [sameSite]  VARCHAR     NULL,
+            [partitioned] TINYINT   NULL,
+            [priority]  VARCHAR     NULL
         )`;
 
         this.#database
@@ -92,10 +94,12 @@ export class SessionTable {
             [${this.#tableName}].[secure],
             [${this.#tableName}].[expires],
             [${this.#tableName}].[httpOnly],
-            [${this.#tableName}].[sameSite]
-        
+            [${this.#tableName}].[sameSite],
+            [${this.#tableName}].[partitioned],
+            [${this.#tableName}].[priority]
+
         FROM [${this.#tableName}]
-        
+
         WHERE
             [${this.#tableName}].[sid] = ?`;
 
@@ -145,8 +149,10 @@ export class SessionTable {
             [${this.#tableName}].[secure],
             [${this.#tableName}].[expires],
             [${this.#tableName}].[httpOnly],
-            [${this.#tableName}].[sameSite]
-        
+            [${this.#tableName}].[sameSite],
+            [${this.#tableName}].[partitioned],
+            [${this.#tableName}].[priority]
+
         FROM [${this.#tableName}]
 
         WHERE
@@ -200,9 +206,11 @@ export class SessionTable {
             [secure],
             [expires],
             [httpOnly],
-            [sameSite]
+            [sameSite],
+            [partitioned],
+            [priority]
         ) VALUES
-        ( ?, ?, ?, ?, ?, ?, ?, ?, ? )`;
+        ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )`;
 
         const v = SessionParser.serialize(session);
         this.#database
@@ -216,7 +224,9 @@ export class SessionTable {
                 v.secure,
                 v.expires,
                 v.httpOnly,
-                v.sameSite
+                v.sameSite,
+                v.partitioned,
+                v.priority
             );
     }
 
@@ -238,8 +248,10 @@ export class SessionTable {
             [secure]   = ?,
             [expires]  = ?,
             [httpOnly] = ?,
-            [sameSite] = ?
-        
+            [sameSite] = ?,
+            [partitioned] = ?,
+            [priority] = ?
+
         WHERE
             [sid] = ?`;
 
@@ -255,6 +267,8 @@ export class SessionTable {
                 v.expires,
                 v.httpOnly,
                 v.sameSite,
+                v.partitioned,
+                v.priority,
                 sid
             );
     }
