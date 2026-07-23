@@ -148,8 +148,9 @@ export class SessionTable {
             [${this.#tableName}].[sameSite]
         
         FROM [${this.#tableName}]
-        
+
         WHERE
+            [${this.#tableName}].[expires] IS NULL OR
             datetime([${this.#tableName}].[expires]) > datetime('now')`;
 
         return this.#database

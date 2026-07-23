@@ -103,5 +103,18 @@ describe(
                 false
             );
         });
+
+        it('getAll() includes a session with no expiration date', (t: it.TestContext) => {
+            const sessionTable = new SessionTable(path, name);
+            const json = { noExpiry: true };
+            const cookie = new Cookie();
+
+            sessionTable.insert('no-expiry', { json, cookie });
+            const all = sessionTable.getAll();
+            t.assert.strictEqual(
+                all.some(s => s.json['noExpiry'] === true),
+                true
+            );
+        });
     }
 );

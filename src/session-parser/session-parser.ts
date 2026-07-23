@@ -78,22 +78,20 @@ export class SessionParser {
         if (typeof v.httpOnly === 'number')
             cookie.httpOnly = v.httpOnly === 1;
 
-        switch (true) {
-            case v.sameSite === 'lax':
-            case v.sameSite === 'none':
-            case v.sameSite === 'strict': {
+        switch (v.sameSite) {
+            case 'lax':
+            case 'none':
+            case 'strict': {
                 cookie.sameSite = v.sameSite;
                 break;
             }
 
-            case typeof v.sameSite === 'number': {
-                cookie.sameSite = v.sameSite === 1;
+            case 'true':
+            case 'false': {
+                cookie.sameSite = JSON.parse(v.sameSite);
                 break;
             }
         }
-
-        if (typeof v.sameSite === 'number')
-            cookie.sameSite = v.sameSite === 1;
 
         return { cookie, json };
     }

@@ -49,4 +49,19 @@ describe('SessionParser', () => {
         t.assert.strictEqual(cookie.httpOnly, true);
         t.assert.strictEqual(cookie.sameSite, 'lax');
     });
+
+    it('round-trips a boolean sameSite value', (t: it.TestContext) => {
+        const cookie = new Cookie();
+        cookie.sameSite = true;
+
+        const serialized = SessionParser.serialize({
+            cookie,
+            json: { foo: 'bar' }
+        });
+
+        t.assert.strictEqual(serialized.sameSite, 'true');
+
+        const { cookie: parsed } = SessionParser.parse(serialized);
+        t.assert.strictEqual(parsed.sameSite, true);
+    });
 });
