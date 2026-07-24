@@ -36,6 +36,7 @@
     "access": "public"
   },
   "scripts": {
+    "prepublishOnly": "node --run build",
     "build:clean": "rm -rf ./dist",
     "build:bleed": "bleed build --config ./tsconfig.build.json",
     "build:.d.ts": "tsc --project ./tsconfig.build.json",
