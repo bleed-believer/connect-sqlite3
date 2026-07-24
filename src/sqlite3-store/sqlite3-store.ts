@@ -7,8 +7,8 @@ import { Store } from 'express-session';
 /**
  * `express-session` compatible {@link Store} backed by a SQLite table via
  * `better-sqlite3`. The underlying table is created (via migrations) as
- * soon as the store is constructed, and each call purges expired sessions
- * before performing its own operation.
+ * soon as the store is constructed, and every call except {@link clear}
+ * purges expired sessions before performing its own operation.
  */
 export class SQLite3Store extends Store {
     #sessionTable: SessionTable;
