@@ -1,7 +1,7 @@
 {
   "name": "@bleed-believer/connect-sqlite3",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A SQLite-backed session store for express-session, built on top of better-sqlite3.",
   "author": "sleep-written",
   "license": "MIT",
