@@ -20,7 +20,7 @@ import { SQLite3Store } from '@bleed-believer/connect-sqlite3';
 const app = express();
 
 app.use(session({
-    store: new SQLite3Store('./sessions.db', 'sessions'),
+    store: new SQLite3Store('./sessions.db'),
     secret: 'change-me',
     resave: false,
     saveUninitialized: false
@@ -38,19 +38,18 @@ app.listen(3000);
 
 Every session's arbitrary payload is stored under `req.session.json` — importing this package augments `express-session`'s `SessionData` type with that property, so `req.session.json` is typed out of the box.
 
-The underlying SQLite table (and database file) is created automatically on first use; there is no manual setup step.
+The underlying SQLite table (and database file) is created automatically via migrations as soon as `SQLite3Store` is constructed; there is no manual setup step.
 
 ## `SQLite3Store`
 
 ```ts
-new SQLite3Store(target, tableName, options?)
+new SQLite3Store(target, verbose?)
 ```
 
 | Parameter    | Type                   | Description |
 | ------------ | ---------------------- | ----------- |
 | `target`     | `string \| Buffer`     | Path to the SQLite database file (or an in-memory buffer), forwarded to `better-sqlite3`. |
-| `tableName`  | `string`               | Name of the table used to store sessions. |
-| `options`    | `better-sqlite3.Options` (optional) | Connection options forwarded to `better-sqlite3`. |
+| `verbose`    | `boolean` (optional)   | When `true`, logs every SQL statement executed against the database. |
 
 `SQLite3Store` extends `express-session`'s `Store`, so it implements the full standard store interface (`get`, `set`, `touch`, `destroy`, `all`, `length`, `clear`) and can be passed directly to `express-session`'s `store` option, as shown above. You generally won't call these methods yourself — `express-session` calls them for you as requests come in.
 

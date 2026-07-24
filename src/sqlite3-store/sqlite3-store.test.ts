@@ -9,13 +9,12 @@ describe(
     { concurrency: false },
     () => {
         const path = './sqlite3-store.db';
-        const name = 'sqlite3-store-session';
 
         before(() => rm(path, { force: true }));
         after (() => rm(path, { force: true }));
 
         it('Create some sessions', async (t: it.TestContext) => {
-            const store = new SQLite3Store(path, name);
+            const store = new SQLite3Store(path);
             store.set('k999', createSession({
                 json: { foo: 'bar' },
                 path: '/',
@@ -48,14 +47,14 @@ describe(
         });
 
         it('Get session "k666"', async (t: it.TestContext) => {
-            const store = new SQLite3Store(path, name);
+            const store = new SQLite3Store(path);
             const [ session ] = await toPromise(store, s => s.get)('k666');
 
             t.assert.deepStrictEqual(session?.json, { foo: 'kek' });
         });
 
         it('Change session "k333" value', async (t: it.TestContext) => {
-            const store = new SQLite3Store(path, name);
+            const store = new SQLite3Store(path);
             const [ session ] = await toPromise(store, s => s.get)('k333');
 
             if (!session) {
@@ -67,14 +66,14 @@ describe(
         });
 
         it('Get session "k333" to check the update', async (t: it.TestContext) => {
-            const store = new SQLite3Store(path, name);
+            const store = new SQLite3Store(path);
             const [ session ] = await toPromise(store, s => s.get)('k333');
 
             t.assert.deepStrictEqual(session?.json, { perreo: 'ijoeputa' });
         });
 
         it('Touch existing session "k666" updates its data', async (t: it.TestContext) => {
-            const store = new SQLite3Store(path, name);
+            const store = new SQLite3Store(path);
             const [ session ] = await toPromise(store, s => s.get)('k666');
 
             if (!session) {
@@ -89,7 +88,7 @@ describe(
         });
 
         it('Touch a non-existing session does nothing', async (t: it.TestContext) => {
-            const store = new SQLite3Store(path, name);
+            const store = new SQLite3Store(path);
             const session = createSession({
                 json: { foo: 'ghost' },
                 path: '/',
@@ -106,7 +105,7 @@ describe(
         });
 
         it('Remove "k999" session', async (t: it.TestContext) => {
-            const store = new SQLite3Store(path, name);
+            const store = new SQLite3Store(path);
             await toPromise(store, s => s.destroy)('k333');
 
             const [ session ] = await toPromise(store, s => s.get)('k333');
@@ -117,7 +116,7 @@ describe(
         });
 
         it('Remove all sessions', async (t: it.TestContext) => {
-            const store = new SQLite3Store(path, name);
+            const store = new SQLite3Store(path);
             await toPromise(store, s => s.clear)();
 
             const [ length ] = await toPromise(store, s => s.length)();

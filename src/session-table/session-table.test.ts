@@ -1,4 +1,5 @@
 import { SessionTable } from './session-table.js';
+import { SQLite3 } from '../sqlite3/index.js';
 
 import { after, before, describe, it } from 'node:test';
 import { Cookie } from 'express-session';
@@ -9,19 +10,20 @@ describe(
     { concurrency: false },
     () => {
         const path = './session-table.db';
-        const name = 'connect-sqlite3-session';
         const daemonExpires = new Date(Date.now() + 1000 * 60 * 60 * 24);
 
         before(() => rm(path, { force: true }));
         after (() => rm(path, { force: true }));
 
         it('Create table', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             t.assert.strictEqual(sessionTable.getLength(), 0);
         });
 
         it('Create a session', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const json = { foo: 'bar' };
             const cookie = new Cookie();
             cookie.path = '/joder/chaval';
@@ -33,7 +35,8 @@ describe(
         });
 
         it('Get the session "daemon666"', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const { cookie, json } = sessionTable.get('daemon666') ?? {};
             t.assert.strictEqual(cookie?.path, '/joder/chaval');
             t.assert.strictEqual(cookie?.expires?.toJSON(), daemonExpires.toJSON());
@@ -42,7 +45,8 @@ describe(
         });
 
         it('Update the session "daemon666"', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const session = sessionTable.get('daemon666');
             if (!session) {
                 t.assert.fail('This test must gets an existing session');
@@ -59,14 +63,16 @@ describe(
         });
 
         it('Delete the session "daemon666"', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             sessionTable.delete('daemon666');
             t.assert.strictEqual(sessionTable.get('daemon666'), null);
         });
 
 
         it('Purgue expired sessions', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const json = { ñeee: true };
             const cookie = new Cookie();
             cookie.expires = new Date(2000, 0, 0);
@@ -76,7 +82,8 @@ describe(
         });
 
         it('Purgue a session that expired earlier today', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const json = { today: true };
             const cookie = new Cookie();
             cookie.expires = new Date(Date.now() - 1_000);
@@ -86,7 +93,8 @@ describe(
         });
 
         it('getAll() excludes a session that expired earlier today', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const json = { today: true };
             const cookie = new Cookie();
             cookie.expires = new Date(Date.now() - 1_000);
@@ -100,7 +108,8 @@ describe(
         });
 
         it('getAll() includes a session with no expiration date', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const json = { noExpiry: true };
             const cookie = new Cookie();
 
@@ -113,7 +122,8 @@ describe(
         });
 
         it('round-trips the partitioned and priority cookie attributes', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const json = { chips: true };
             const cookie = new Cookie();
             cookie.partitioned = true;
@@ -127,7 +137,8 @@ describe(
         });
 
         it('round-trips originalMaxAge so a reloaded session still touches for the full window', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const json = { rolling: true };
             const cookie = new Cookie();
             cookie.maxAge = 60_000;
@@ -139,7 +150,8 @@ describe(
         });
 
         it('set() defaults a missing json payload to {} instead of throwing', (t: it.TestContext) => {
-            const sessionTable = new SessionTable(path, name);
+            const sqlite3 = new SQLite3(path);
+            const sessionTable = new SessionTable(sqlite3);
             const cookie = new Cookie();
 
             t.assert.doesNotThrow(() => {

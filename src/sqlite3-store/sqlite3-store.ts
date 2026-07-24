@@ -1,24 +1,28 @@
 import type { SessionData } from 'express-session';
 
-import { SessionTable } from './session-table/index.js';
+import { SessionTable } from '../session-table/index.js';
+import { SQLite3 } from '../sqlite3/index.js';
 import { Store } from 'express-session';
 
 /**
  * `express-session` compatible {@link Store} backed by a SQLite table via
- * `better-sqlite3`. Each call lazily ensures the underlying table exists
- * and purges expired sessions before performing its operation.
+ * `better-sqlite3`. The underlying table is created (via migrations) as
+ * soon as the store is constructed, and each call purges expired sessions
+ * before performing its own operation.
  */
 export class SQLite3Store extends Store {
     #sessionTable: SessionTable;
 
     /**
-     * @param args - Forwarded as-is to the {@link SessionTable} constructor
-     * (database target path/buffer, table name, and optional `better-sqlite3`
-     * connection options).
+     * @param target - Path to the SQLite database file (or a `Buffer`),
+     * forwarded to `better-sqlite3`'s `Database` constructor.
+     * @param verbose - When `true`, logs every SQL statement executed
+     * against the database.
      */
-    constructor(...args: ConstructorParameters<typeof SessionTable>) {
+    constructor(target: string | Buffer, verbose?: boolean) {
         super();
-        this.#sessionTable = new SessionTable(...args);
+        const sqlite3 = new SQLite3(target, verbose);
+        this.#sessionTable = new SessionTable(sqlite3);
     }
 
     /**

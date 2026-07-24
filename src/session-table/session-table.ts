@@ -1,10 +1,8 @@
 import type { SessionData } from 'express-session';
-import type { Options } from 'better-sqlite3';
 
-import { sanitizeTableName } from './sanitize-table-name.js';
-import { SQLite3Session } from './sqlite3-session.js';
+import { SessionQueries } from './session-queries.js';
 import { SessionParser } from '../session-parser/index.js';
-import Database from 'better-sqlite3';
+import { SQLite3 } from '../sqlite3/index.js';
 
 /**
  * Low-level data access layer over a `better-sqlite3` database, storing
@@ -12,127 +10,70 @@ import Database from 'better-sqlite3';
  * serialized/deserialized through {@link SessionParser}.
  */
 export class SessionTable {
-    #sqlite3: SQLite3Session;
+    #queries: SessionQueries;
+    #sqlite3: SQLite3;
 
     /**
-     * @param target - Path to the SQLite database file (or a `Buffer`),
-     * forwarded to `better-sqlite3`'s `Database` constructor.
-     * @param tableName - Name of the table used to store sessions.
-     * @param options - Optional `better-sqlite3` connection options.
+     * @param sqlite3 - The {@link SQLite3} connection to operate on. Its
+     * constructor already ensures the sessions table exists via migrations.
      */
-    constructor(target: string | Buffer, tableName: string, options?: Options) {
-        this.#sqlite3 = new SQLite3Session(
-            new Database(target, options),
-            sanitizeTableName(tableName)
-        );
+    constructor(sqlite3: SQLite3) {
+        this.#sqlite3 = sqlite3;
+        this.#queries = new SessionQueries(sqlite3);
     }
 
     getLength(): number {
-        const raw = this.#sqlite3.transaction(() => {
-            this.#sqlite3.createStatement().run();
-            this.#sqlite3.clearExpiredStatement().run();
-            return this.#sqlite3.getLengthStatement().get();
+        const length = this.#sqlite3.transaction(() => {
+            this.#queries.clearExpired();
+            return this.#queries.getLength();
         });
 
-        return raw?.count ?? 0;
+        return length;
     }
     
     getAll(): SessionData[] {
-        const raw = this.#sqlite3.transaction(() => {
-            this.#sqlite3.createStatement().run();
-            this.#sqlite3.clearExpiredStatement().run();
-            return this.#sqlite3.getAllStatement().all();
+        return this.#sqlite3.transaction(() => {
+            this.#queries.clearExpired();
+            return this.#queries.getAll();
         });
-
-        return raw.map(x => SessionParser.parse(x));
     }
     
     get(sid: string): SessionData | null {
-        const raw = this.#sqlite3.transaction(() => {
-            this.#sqlite3.createStatement().run();
-            this.#sqlite3.clearExpiredStatement().run();
-            return this.#sqlite3.getStatement().get(sid);
+        return this.#sqlite3.transaction(() => {
+            this.#queries.clearExpired();
+            return this.#queries.get(sid);
         });
-
-        return raw
-        ?   SessionParser.parse(raw)
-        :   null;
     }
 
     set(sid: string, sessionData: SessionData): void {
-        const raw = SessionParser.serialize(sessionData);
-        const arg = [
-            raw.path,
-            raw.json,
-            raw.domain,
-            raw.signed,
-            raw.secure,
-            raw.expires,
-            raw.httpOnly,
-            raw.sameSite,
-            raw.priority,
-            raw.partitioned,
-            raw.originalMaxAge,
-            sid
-        ] as const;
-
         this.#sqlite3.transaction(() => {
-            this.#sqlite3.createStatement().run();
-            this.#sqlite3.clearExpiredStatement().run();
-
-            const { exists } = this.#sqlite3
-                .getExistsStatement()
-                .get(sid) ?? { exists: 0 };
-
-            if (exists === 1) {
-                this.#sqlite3.updateStatement().run(...arg);
+            this.#queries.clearExpired();
+            if (this.#queries.getExists(sid)) {
+                this.#queries.update(sid, sessionData);
             } else {
-                this.#sqlite3.insertStatement().run(...arg);
+                this.#queries.insert(sid, sessionData);
             }
         });
     }
 
     clear(): void {
         this.#sqlite3.transaction(() => {
-            this.#sqlite3.createStatement().run();
-            this.#sqlite3.clearExpiredStatement().run();
-            this.#sqlite3.clearStatement().run();
+            this.#queries.clear();
         });
     }
 
     delete(sid: string): void {
         this.#sqlite3.transaction(() => {
-            this.#sqlite3.createStatement().run();
-            this.#sqlite3.clearExpiredStatement().run();
-            this.#sqlite3.deleteStatement().run(sid);
+            this.#queries.clearExpired();
+            this.#queries.delete(sid);
         });
     }
 
     touch(sid: string, sessionData: SessionData): void {
-        const raw = SessionParser.serialize(sessionData);
         this.#sqlite3.transaction(() => {
-            this.#sqlite3.createStatement().run();
-            this.#sqlite3.clearExpiredStatement().run();
-
-            const { exists } = this.#sqlite3
-                .getExistsStatement()
-                .get(sid) ?? { exists: 0 };
-
-            if (exists === 1) {
-                this.#sqlite3.updateStatement().run(
-                    raw.path,
-                    raw.json,
-                    raw.domain,
-                    raw.signed,
-                    raw.secure,
-                    raw.expires,
-                    raw.httpOnly,
-                    raw.sameSite,
-                    raw.priority,
-                    raw.partitioned,
-                    raw.originalMaxAge,
-                    sid
-                );
+            this.#queries.clearExpired();
+            if (this.#queries.getExists(sid)) {
+                this.#queries.update(sid, sessionData);
             }
         });
     }
