@@ -10,97 +10,57 @@ export class SQLite3Migrations {
     }
 
     #createMigrationTable(): void {
-        const query = [
-            `CREATE TABLE [migration](`,
-            `   [id]    INTEGER     PRIMARY KEY,`,
-            `   [name]  VARCHAR     NULL`,
-            `)`
-        ].join('');
-
-        const { exists } = this.#sqlite3.get<
-            [ query: string ],
-            { exists: 1 | 0; }
-        >(
+        this.#sqlite3.run(
             `--sql
-            SELECT
-                IIF(
-                    COUNT(*) > 0,
-                    CAST(1 AS BOOLEAN),
-                    CAST(0 AS BOOLEAN)
-                ) AS [exists]
-            
-            FROM sqlite_schema
-            
-            WHERE
-                sqlite_schema.tbl_name = 'migration'
-            AND sqlite_schema.sql = ?`,
-            query
-        )!;
-
-        if (exists === 0) {
-            this.#sqlite3.run(`DROP TABLE IF EXISTS [migration]`);
-            this.#sqlite3.run(query);
-        }
-
-        const { count } = this.#sqlite3.get<
-            [],
-            { count: number; }
-        >(
-            `--sql
-            SELECT
-                COUNT(*) AS [count]
-            
-            FROM [migration]`
-        )!;
-
-        if (count !== 1) {
-            this.#sqlite3.run(
-                `--sql
-                DELETE FROM [migration]`
-            );
-
-            this.#sqlite3.run(
-                `--sql
-                INSERT INTO [migration]
-                ([name])
-                VALUES
-                (NULL)`
-            );
-        }
+            CREATE TABLE IF NOT EXISTS [migration](
+                [name]      VARCHAR     PRIMARY KEY,
+                [appliedAt] VARCHAR     NOT NULL
+            )`
+        );
     }
 
     #runMigrations(migrations: Migration[]): void {
-        let { name } = this.#sqlite3.get<[], { name: string | null; }>(
-            `--sql
-            SELECT
-                [migration].[name]
-                
-            FROM [migration]
-            
-            LIMIT 1`
-        )!;
+        const applied = new Set(
+            this.#sqlite3
+                .all<[], { name: string; }>(
+                    `--sql
+                    SELECT
+                        [migration].[name]
 
-        let i = typeof name === 'string'
-        ?   migrations.findIndex(x => x.name === name)
-        :   -1;
-
-        if (i >= 0) {
-            i++;
-        } else {
-            i = 0;
-        }
-
-        for (const migration of migrations.slice(i)) {
-            migration.execute(this.#sqlite3);
-            name = migration.name;
-        }
-
-        this.#sqlite3.run(
-            `--sql
-            UPDATE [migration] SET
-                [name] = ?`,
-            name
+                    FROM [migration]`
+                )
+                .map(x => x.name)
         );
+
+        const names = new Set(migrations.map(x => x.name));
+        for (const name of applied) {
+            if (!names.has(name)) {
+                throw new Error(
+                    `Applied migration "${name}" is missing from the ` +
+                    `migration list — did you rename or remove it?`
+                );
+            }
+        }
+
+        for (const migration of migrations) {
+            if (applied.has(migration.name)) {
+                continue;
+            }
+
+            migration.execute(this.#sqlite3);
+            this.#sqlite3.run(
+                `--sql
+                INSERT INTO [migration] (
+                    [name],
+                    [appliedAt]
+                ) VALUES (
+                    ?,
+                    ?
+                )`,
+                migration.name,
+                new Date().toISOString()
+            );
+        }
     }
 
     runMigrations(migrations: Migration[]): void {
