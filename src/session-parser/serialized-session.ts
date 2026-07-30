@@ -5,7 +5,7 @@
  * consumed by {@link SessionParser.parse} maps 1:1 to a property here.
  */
 export interface SerializedSession {
-    /** `session.json` payload, serialized as a JSON string. */
+    /** Every top-level `SessionData` property except `cookie`, serialized as a JSON string. */
     json: string;
     /** Cookie `path`, or `null` when unset. */
     path: string | null;

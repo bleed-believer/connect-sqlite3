@@ -1,19 +1,19 @@
 import 'express-session';
 
 /**
- * Augments `express-session`'s {@link SessionData} interface with the
- * `json` property, which holds the arbitrary payload stored by the
- * application inside a session. Also backfills the `partitioned` and
- * `priority` cookie attributes on {@link Cookie}, which `@types/express-session`
- * omits from the class even though `CookieOptions` (and the real runtime
- * `Cookie` implementation) both support them.
+ * Backfills the `partitioned` and `priority` cookie attributes on
+ * {@link Cookie}, which `@types/express-session` omits from the class even
+ * though `CookieOptions` (and the real runtime `Cookie` implementation)
+ * both support them.
+ *
+ * `SessionData` itself is deliberately left untouched here: every
+ * top-level property set on it (besides `cookie`) is persisted and
+ * restored automatically by {@link SessionParser}, so applications should
+ * declare their own payload shape via their own `declare module
+ * 'express-session'` block instead of relying on a fixed property from
+ * this package.
  */
 declare module 'express-session' {
-    // interface SessionData {
-    //     /** Arbitrary session payload set by the application. */
-    //     json: Record<string, any>;
-    // }
-
     interface Cookie {
         /** `Partitioned` `Set-Cookie` attribute (CHIPS), or `undefined` when unset. */
         partitioned?: boolean | undefined;

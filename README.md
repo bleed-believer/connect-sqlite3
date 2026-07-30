@@ -27,16 +27,24 @@ app.use(session({
 }));
 
 app.get('/', (req, res) => {
-    req.session.json ??= { visits: 0 };
-    req.session.json.visits += 1;
+    req.session.visits ??= 0;
+    req.session.visits += 1;
 
-    res.send(`You've visited this page ${req.session.json.visits} time(s).`);
+    res.send(`You've visited this page ${req.session.visits} time(s).`);
 });
 
 app.listen(3000);
 ```
 
-Every session's arbitrary payload is stored under `req.session.json` — importing this package augments `express-session`'s `SessionData` type with that property, so `req.session.json` is typed out of the box.
+Every top-level property you set on `req.session` (other than `cookie`, which `express-session` manages) is persisted and restored automatically — there's no dedicated payload property to nest your data under. To get it typed, declaration-merge your own shape into `SessionData`:
+
+```ts
+declare module 'express-session' {
+    interface SessionData {
+        visits?: number;
+    }
+}
+```
 
 The underlying SQLite table (and database file) is created automatically via migrations as soon as `SQLite3Store` is constructed; there is no manual setup step.
 
