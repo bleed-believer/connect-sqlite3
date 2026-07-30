@@ -48,43 +48,43 @@ describe(
 
         it('Get session "k666"', async (t: it.TestContext) => {
             const store = new SQLite3Store(path);
-            const [ session ] = await toPromise(store, s => s.get)('k666');
+            const [ session ] = await toPromise(store, s => s.get)('k666') as any;
 
-            t.assert.deepStrictEqual(session?.json, { foo: 'kek' });
+            t.assert.deepStrictEqual(session?.foo, 'kek');
         });
 
         it('Change session "k333" value', async (t: it.TestContext) => {
             const store = new SQLite3Store(path);
-            const [ session ] = await toPromise(store, s => s.get)('k333');
+            const [ session ] = await toPromise(store, s => s.get)('k333') as any;
 
             if (!session) {
                 t.assert.fail('The session "k333" doesn\'t exists');
             }
 
-            session.json = { perreo: 'ijoeputa' };
+            session.perreo = 'ijoeputa';
             await toPromise(store, s => s.set)('k333', session);
         });
 
         it('Get session "k333" to check the update', async (t: it.TestContext) => {
             const store = new SQLite3Store(path);
-            const [ session ] = await toPromise(store, s => s.get)('k333');
+            const [ session ] = await toPromise(store, s => s.get)('k333') as any;
 
-            t.assert.deepStrictEqual(session?.json, { perreo: 'ijoeputa' });
+            t.assert.deepStrictEqual(session?.perreo, 'ijoeputa');
         });
 
         it('Touch existing session "k666" updates its data', async (t: it.TestContext) => {
             const store = new SQLite3Store(path);
-            const [ session ] = await toPromise(store, s => s.get)('k666');
+            const [ session ] = await toPromise(store, s => s.get)('k666') as any;
 
             if (!session) {
                 t.assert.fail('The session "k666" doesn\'t exists');
             }
 
-            session.json = { touched: true };
+            session.touched = true;
             await toPromise(store, s => s.touch)('k666', session);
 
-            const [ updated ] = await toPromise(store, s => s.get)('k666');
-            t.assert.deepStrictEqual(updated?.json, { touched: true });
+            const [ updated ] = await toPromise(store, s => s.get)('k666') as any;
+            t.assert.deepStrictEqual(updated?.touched, true);
         });
 
         it('Touch a non-existing session does nothing', async (t: it.TestContext) => {

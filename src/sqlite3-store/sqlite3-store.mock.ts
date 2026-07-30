@@ -16,7 +16,7 @@ export function createSession(
         Partial<Cookie>
     )
 ): SessionData {
-    const json = o.json;
+    const json: any = o.json;
     const cookie = new Cookie();
     if (typeof o.path     !== 'undefined') cookie.path     = o.path;
     if (typeof o.domain   !== 'undefined') cookie.domain   = o.domain;
@@ -27,7 +27,8 @@ export function createSession(
     if (typeof o.httpOnly !== 'undefined') cookie.httpOnly = o.httpOnly;
     if (typeof o.sameSite !== 'undefined') cookie.sameSite = o.sameSite;
 
-    return { json, cookie };
+    json.cookie = cookie;
+    return json;
 }
 
 /**

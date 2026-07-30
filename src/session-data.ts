@@ -9,10 +9,10 @@ import 'express-session';
  * `Cookie` implementation) both support them.
  */
 declare module 'express-session' {
-    interface SessionData {
-        /** Arbitrary session payload set by the application. */
-        json: Record<string, any>;
-    }
+    // interface SessionData {
+    //     /** Arbitrary session payload set by the application. */
+    //     json: Record<string, any>;
+    // }
 
     interface Cookie {
         /** `Partitioned` `Set-Cookie` attribute (CHIPS), or `undefined` when unset. */

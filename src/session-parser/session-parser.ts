@@ -17,8 +17,14 @@ export class SessionParser {
      * @returns The serialized representation, ready to be persisted.
      */
     static serialize(v: SessionData): SerializedSession {
+        const json = Object.fromEntries(
+            Object
+                .entries(v)
+                .filter(([ k ]) => k !== 'cookie')
+        );
+
         return {
-            json: JSON.stringify(v.json ?? {}),
+            json: JSON.stringify(json ?? {}),
             path: v.cookie.path ?? null,
             domain: v.cookie.domain ?? null,
             signed: typeof v.cookie.signed === 'boolean'
@@ -54,7 +60,7 @@ export class SessionParser {
      * @returns The reconstructed session data.
      */
     static parse(v: SerializedSession): SessionData {
-        const json = JSON.parse(v.json);
+        const session = JSON.parse(v.json) as SessionData;
         const cookie = new Cookie();
         
         if (typeof v.path === 'string')
@@ -119,6 +125,7 @@ export class SessionParser {
             }
         }
 
-        return { cookie, json };
+        session.cookie = cookie;
+        return session;
     }
 }

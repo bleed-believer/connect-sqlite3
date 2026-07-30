@@ -41,6 +41,7 @@
     "build:bleed": "bleed build --config ./tsconfig.build.json",
     "build:.d.ts": "tsc --project ./tsconfig.build.json",
     "build": "node --run build:clean && node --run build:bleed && node --run build:.d.ts",
+    "check": "tsc --project ./tsconfig.build.json --noEmit",
     "test": "node --import @bleed-believer/cli --test --"
   },
   "devDependencies": {

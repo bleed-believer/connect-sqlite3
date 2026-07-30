@@ -1,3 +1,5 @@
+import type { SessionData } from 'express-session';
+
 import { SessionParser } from './session-parser.js';
 import { describe, it } from 'node:test';
 import { Cookie } from 'express-session';
@@ -14,8 +16,8 @@ describe('SessionParser', () => {
 
         const v = SessionParser.serialize({
             cookie,
-            json: { foo: 'bar' }
-        });
+            foo: 'bar'
+        } as SessionData);
 
         t.assert.deepStrictEqual(v, {
             json: '{"foo":"bar"}',
@@ -40,7 +42,7 @@ describe('SessionParser', () => {
 
     it('SessionParser.parse', (t: it.TestContext) => {
         const expires = new Date(2026, 6, 6);
-        const { json, cookie } = SessionParser.parse({
+        const { foo, cookie } = SessionParser.parse({
             json: '{"foo":"bar"}',
             path: '/',
             domain: null,
@@ -52,9 +54,9 @@ describe('SessionParser', () => {
             partitioned: 1,
             priority: 'high',
             originalMaxAge: 30_000
-        });
+        }) as any;
 
-        t.assert.deepStrictEqual(json, { foo: 'bar' });
+        t.assert.deepStrictEqual(foo, 'bar');
         t.assert.strictEqual(cookie.path, '/');
         t.assert.strictEqual(cookie.domain, undefined);
         t.assert.strictEqual(cookie.signed, false);
@@ -71,7 +73,7 @@ describe('SessionParser', () => {
         const cookie = new Cookie();
         cookie.maxAge = 30_000;
 
-        const serialized = SessionParser.serialize({ cookie, json: {} });
+        const serialized = SessionParser.serialize({ cookie });
         t.assert.strictEqual(serialized.originalMaxAge, 30_000);
 
         // Simulate time passing before the session is read back: the
@@ -92,8 +94,8 @@ describe('SessionParser', () => {
 
         const serialized = SessionParser.serialize({
             cookie,
-            json: { foo: 'bar' }
-        });
+            foo: 'bar'
+        } as SessionData);
 
         t.assert.strictEqual(serialized.sameSite, 'true');
 
