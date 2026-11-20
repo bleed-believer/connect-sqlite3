@@ -5,10 +5,10 @@ A SQLite-backed session store for [`express-session`](https://www.npmjs.com/pack
 ## Installation
 
 ```bash
-npm install @bleed-believer/connect-sqlite3 express-session better-sqlite3
+npm install @bleed-believer/connect-sqlite3 express-session
 ```
 
-`express-session` and `better-sqlite3` are peer dependencies of this store — install them alongside it.
+`express-session` is a peer dependency of this store — install it alongside it. `better-sqlite3` is a regular dependency and is installed with the store.
 
 ## Usage
 
@@ -51,21 +51,46 @@ The underlying SQLite table (and database file) is created automatically via mig
 ## `SQLite3Store`
 
 ```ts
-new SQLite3Store(target, verbose?)
+new SQLite3Store(target, options?)
 ```
 
-| Parameter    | Type                   | Description |
-| ------------ | ---------------------- | ----------- |
-| `target`     | `string \| Buffer`     | Path to the SQLite database file (or an in-memory buffer), forwarded to `better-sqlite3`. |
-| `verbose`    | `boolean` (optional)   | When `true`, logs every SQL statement executed against the database. |
+| Parameter    | Type                                  | Description |
+| ------------ | ------------------------------------- | ----------- |
+| `target`     | `string \| Buffer`                    | Path to the SQLite database file (or an in-memory buffer), forwarded to `better-sqlite3`. |
+| `options`    | `SQLite3StoreOptions` (optional)      | See below. A `boolean` is still accepted here and means `{ verbose }`, so `new SQLite3Store(path, true)` keeps working. |
+
+`SQLite3StoreOptions`:
+
+| Option            | Type             | Default      | Description |
+| ----------------- | ---------------- | ------------ | ----------- |
+| `verbose`         | `boolean`        | `false`      | When `true`, logs every SQL statement executed against the database. |
+| `purgeIntervalMs` | `number`         | `900000` (15 minutes) | How often the expired sessions are deleted. `0` disables the timer (call `purge()` yourself). The timer never keeps the process alive. |
+| `now`             | `() => number`   | `Date.now`   | Returns the current time in milliseconds. Meant for tests. |
+
+```ts
+const store = new SQLite3Store('./sessions.db', {
+    purgeIntervalMs: 60 * 60 * 1000 // purge once an hour
+});
+```
 
 `SQLite3Store` extends `express-session`'s `Store`, so it implements the full standard store interface (`get`, `set`, `touch`, `destroy`, `all`, `length`, `clear`) and can be passed directly to `express-session`'s `store` option, as shown above. You generally won't call these methods yourself — `express-session` calls them for you as requests come in.
 
+It also adds two methods of its own:
+
+- **`purge(): number`** deletes every expired session right away and returns how many it deleted. Use it when the timer is disabled, or when you need the purge to happen at a specific moment.
+- **`close(): void`** stops the purge timer and closes the database. Call it when your app shuts down. Calling it twice is fine; any other method called afterwards reports an error through its callback.
+
 ### Behavior notes
 
-- **`touch(sid, session, callback)`** only refreshes a session that already exists; it never creates one.
-- Every method (`get`, `set`, `touch`, `destroy`, `all`, `length`) purges expired sessions before performing its own operation. `clear` doesn't need this pass since it wipes the table itself.
-- Expiration is driven by the session cookie's `maxAge`/`expires`; a session with no expiry never gets swept by the cleanup pass.
+- Expired sessions are deleted by a timer (every 15 minutes by default) or by `purge()`, not on every call. Between purges they stay in the table, but no method ever returns them: `get` reports them as not found, and `all` and `length` skip them without deleting them.
+- **`touch(sid, session, callback)`** only moves the expiration of a session that already exists, to `session.cookie.expires`. It writes nothing else, since `express-session` only calls it when the session data didn't change. It never creates a session, and it doesn't bring back one that already expired.
+- **`set(sid, session, callback)`** inserts the session, or replaces it if it already exists.
+- Expiration is driven by the session cookie's `maxAge`/`expires`; a session with no expiry is never purged.
+- The database runs in WAL mode (`journal_mode = WAL`, `synchronous = NORMAL`), so reads and writes don't block each other. SQLite keeps two extra files next to the database, `<name>-wal` and `<name>-shm`. Keep them with it if you copy the database while the app is running.
+
+### Upgrading from 0.1.x
+
+0.2.0 adds a migration that runs the first time the store opens an existing database. It converts the stored expiration dates from ISO text to milliseconds and indexes them, keeping every session. A date that can't be parsed is treated as already expired. After the migration, the database can't be opened by 0.1.x anymore.
 
 ## Development
 

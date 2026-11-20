@@ -1,63 +1,67 @@
 import type { SerializedSession } from '../session-parser/index.js';
+import type { RunResult, Statement } from 'better-sqlite3';
 import type { SQLite3Object } from '../sqlite3/index.js';
 import type { SessionData } from 'express-session';
-import type { RunResult } from 'better-sqlite3';
 
 import { SessionParser } from '../session-parser/index.js';
 
+type Now = number;
+type Expires = number | null;
+type SessionRow = SerializedSession & { sid: string; };
+
+/**
+ * Every statement the store runs. Each one is prepared once, in the
+ * constructor, and reused on every call.
+ *
+ * The expiration checks compare `[expires]` (milliseconds since the
+ * epoch, or `NULL` for "never expires") with a bound `now`, so they can use
+ * the `ix_sqlite3_session_expires` index.
+ */
 export class SessionQueries {
-    #sqlite3: SQLite3Object;
+    #purge:     Statement<[ now: Now ]>;
+    #clear:     Statement<[]>;
+    #delete:    Statement<[ sid: string ]>;
+    #getLength: Statement<[ now: Now ], number>;
+    #getAll:    Statement<[ now: Now ], SerializedSession>;
+    #get:       Statement<[ sid: string, now: Now ], SerializedSession>;
+    #upsert:    Statement<[ row: SessionRow ]>;
+    #touch:     Statement<[ expires: Expires, sid: string, now: Now ]>;
 
     constructor(sqlite3: SQLite3Object) {
-        this.#sqlite3 = sqlite3;
-    }
-
-    clearExpired(): RunResult {
-        return this.#sqlite3.run(
+        this.#purge = sqlite3.prepare(
             `--sql
             DELETE FROM [sqlite3-session]
             WHERE
-                datetime([sqlite3-session].[expires]) <= datetime('now')`
+                [sqlite3-session].[expires] <= ?`
         );
-    }
 
-    clear(): RunResult {
-        return this.#sqlite3.run(
+        this.#clear = sqlite3.prepare(
             `--sql
             DELETE FROM [sqlite3-session]`
         );
-    }
 
-    delete(sid: string): RunResult {
-        return this.#sqlite3.run(
+        this.#delete = sqlite3.prepare(
             `--sql
             DELETE FROM [sqlite3-session]
             WHERE
-                [sqlite3-session].[sid] = ?`,
-            sid
+                [sqlite3-session].[sid] = ?`
         );
-    }
 
-    getLength(): number {
-        const { length } = this.#sqlite3.get<[], { length: number; }>(
+        this.#getLength = sqlite3.prepare<[ now: Now ], number>(
             `--sql
             SELECT
-                COUNT([sqlite3-session].[sid]) AS [length]
-            
-            FROM [sqlite3-session]`
-        ) ?? { length: 0 };
+                COUNT(*) AS [length]
 
-        return length;
-    }
+            FROM [sqlite3-session]
 
-    getAll(): SessionData[] {
-        const raw = this.#sqlite3.all<
-            [],
-            SerializedSession
-        >(
+            WHERE
+                [sqlite3-session].[expires] IS NULL OR
+                [sqlite3-session].[expires] > ?`
+        ).pluck();
+
+        this.#getAll = sqlite3.prepare(
             `--sql
             SELECT
-                [sqlite3-session].[sid],
                 [sqlite3-session].[path],
                 [sqlite3-session].[json],
                 [sqlite3-session].[domain],
@@ -74,40 +78,10 @@ export class SessionQueries {
 
             WHERE
                 [sqlite3-session].[expires] IS NULL OR
-                datetime([sqlite3-session].[expires]) > datetime('now')`
+                [sqlite3-session].[expires] > ?`
         );
 
-        return raw.map(x => SessionParser.parse(x));
-    }
-
-    getExists(sid: string): boolean {
-        const { exists } = this.#sqlite3.get<
-            [ sid: string ],
-            { exists: 1 | 0; }
-        >(
-            `--sql
-            SELECT
-                IIF(
-                    COUNT([sqlite3-session].[sid]) > 0,
-                    CAST(1 AS BOOLEAN),
-                    CAST(0 AS BOOLEAN)
-                ) AS [exists]
-
-            FROM [sqlite3-session]
-
-            WHERE
-                [sqlite3-session].[sid] = ?`,
-            sid
-        ) ?? { exists: 0 };
-
-        return exists === 1;
-    }
-
-    get(sid: string): SessionData | null {
-        const raw = this.#sqlite3.get<
-            [ sid: string ],
-            SerializedSession
-        >(
+        this.#get = sqlite3.prepare(
             `--sql
             SELECT
                 [sqlite3-session].[path],
@@ -125,54 +99,16 @@ export class SessionQueries {
             FROM [sqlite3-session]
 
             WHERE
-                [sqlite3-session].[sid] = ?`,
-            sid
+                [sqlite3-session].[sid] = ? AND (
+                    [sqlite3-session].[expires] IS NULL OR
+                    [sqlite3-session].[expires] > ?
+                )`
         );
 
-        return raw
-        ?   SessionParser.parse(raw)
-        :   null;
-    }
-
-    update(sid: string, sessionData: SessionData): RunResult {
-        const raw = SessionParser.serialize(sessionData);
-        return this.#sqlite3.run(
-            `--sql
-            UPDATE [sqlite3-session] SET
-                [path]              = ?,
-                [json]              = ?,
-                [domain]            = ?,
-                [signed]            = ?,
-                [secure]            = ?,
-                [expires]           = ?,
-                [httpOnly]          = ?,
-                [sameSite]          = ?,
-                [priority]          = ?,
-                [partitioned]       = ?,
-                [originalMaxAge]    = ?
-
-            WHERE
-                [sid] = ?`,
-            raw.path,
-            raw.json,
-            raw.domain,
-            raw.signed,
-            raw.secure,
-            raw.expires,
-            raw.httpOnly,
-            raw.sameSite,
-            raw.priority,
-            raw.partitioned,
-            raw.originalMaxAge,
-            sid
-        );
-    }
-
-    insert(sid: string, sessionData: SessionData): RunResult {
-        const raw = SessionParser.serialize(sessionData);
-        return this.#sqlite3.run(
+        this.#upsert = sqlite3.prepare(
             `--sql
             INSERT INTO [sqlite3-session] (
+                [sid],
                 [path],
                 [json],
                 [domain],
@@ -183,24 +119,94 @@ export class SessionQueries {
                 [sameSite],
                 [priority],
                 [partitioned],
-                [originalMaxAge],
-                [sid]
+                [originalMaxAge]
             ) VALUES (
-                ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?
-            )`,
-            raw.path,
-            raw.json,
-            raw.domain,
-            raw.signed,
-            raw.secure,
-            raw.expires,
-            raw.httpOnly,
-            raw.sameSite,
-            raw.priority,
-            raw.partitioned,
-            raw.originalMaxAge,
-            sid
+                @sid,
+                @path,
+                @json,
+                @domain,
+                @signed,
+                @secure,
+                @expires,
+                @httpOnly,
+                @sameSite,
+                @priority,
+                @partitioned,
+                @originalMaxAge
+            )
+            ON CONFLICT ([sid]) DO UPDATE SET
+                [path]              = [excluded].[path],
+                [json]              = [excluded].[json],
+                [domain]            = [excluded].[domain],
+                [signed]            = [excluded].[signed],
+                [secure]            = [excluded].[secure],
+                [expires]           = [excluded].[expires],
+                [httpOnly]          = [excluded].[httpOnly],
+                [sameSite]          = [excluded].[sameSite],
+                [priority]          = [excluded].[priority],
+                [partitioned]       = [excluded].[partitioned],
+                [originalMaxAge]    = [excluded].[originalMaxAge]`
         );
+
+        // An expired row that the purge hasn't deleted yet counts as
+        // missing: a touch must not bring it back.
+        this.#touch = sqlite3.prepare(
+            `--sql
+            UPDATE [sqlite3-session] SET
+                [expires] = ?
+
+            WHERE
+                [sqlite3-session].[sid] = ? AND (
+                    [sqlite3-session].[expires] IS NULL OR
+                    [sqlite3-session].[expires] > ?
+                )`
+        );
+    }
+
+    /** Deletes every session that expired at or before `now`. */
+    purge(now: Now): RunResult {
+        return this.#purge.run(now);
+    }
+
+    clear(): RunResult {
+        return this.#clear.run();
+    }
+
+    delete(sid: string): RunResult {
+        return this.#delete.run(sid);
+    }
+
+    /** Counts the sessions that haven't expired at `now`. */
+    getLength(now: Now): number {
+        return this.#getLength.get(now) ?? 0;
+    }
+
+    /** Returns the sessions that haven't expired at `now`. */
+    getAll(now: Now): SessionData[] {
+        return this.#getAll
+            .all(now)
+            .map(x => SessionParser.parse(x));
+    }
+
+    /** Returns the session, or `null` if it's missing or expired at `now`. */
+    get(sid: string, now: Now): SessionData | null {
+        const raw = this.#get.get(sid, now);
+        return raw
+        ?   SessionParser.parse(raw)
+        :   null;
+    }
+
+    /** Inserts the session, or replaces every column of an existing one. */
+    upsert(sid: string, sessionData: SessionData): RunResult {
+        const raw = SessionParser.serialize(sessionData);
+        return this.#upsert.run({ ...raw, sid });
+    }
+
+    /**
+     * Sets the expiration of a session that exists and hasn't expired at
+     * `now`. Changes nothing otherwise.
+     */
+    touch(sid: string, expires: Expires, now: Now): RunResult {
+        return this.#touch.run(expires, sid, now);
     }
 }

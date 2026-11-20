@@ -34,7 +34,7 @@ export class SessionParser {
             ?   JSON.stringify(v.cookie.secure)
             :   v.cookie.secure ?? null,
             expires: v.cookie.expires instanceof Date
-            ?   v.cookie.expires.toISOString()
+            ?   v.cookie.expires.getTime()
             :   null,
             httpOnly: typeof v.cookie.httpOnly === 'boolean'
             ?   v.cookie.httpOnly ? 1 : 0
@@ -85,7 +85,7 @@ export class SessionParser {
             }
         }
 
-        if (typeof v.expires === 'string')
+        if (typeof v.expires === 'number')
             cookie.expires = new Date(v.expires);
 
         // Must run after `cookie.expires` is assigned above: the `expires`

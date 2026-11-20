@@ -1,9 +1,8 @@
 import type { Migration, SQLite3Object } from './interfaces/index.js';
 
-import { describe, it, before, after } from 'node:test';
+import { describe, it, before, after, afterEach } from 'node:test';
 import { SQLite3Migrations } from './sqlite3.migrations.js';
 import { SQLite3Base } from './sqlite3.base.js';
-import { rm } from 'node:fs/promises';
 import { rmSync } from 'node:fs';
 
 describe(
@@ -11,6 +10,17 @@ describe(
     { concurrency: false },
     () => {
         const target = './sqlite3.migrations.db';
+        const removeDatabase = (path: string) => [ '', '-wal', '-shm' ]
+            .forEach(x => rmSync(path + x, { force: true }));
+
+        const opened: SQLite3Base[] = [];
+        const open = (path: string) => {
+            const sqlite3 = new SQLite3Base(path);
+            opened.push(sqlite3);
+            return sqlite3;
+        };
+
+        const closeAll = () => opened.splice(0).forEach(x => x.close());
         const countTables = (sqlite: SQLite3Object) => sqlite.get<
             [],
             {
@@ -144,11 +154,12 @@ describe(
             },
         };
 
-        before(() => rm(target, { force: true }));
-        after (() => rm(target, { force: true }));
+        before(() => removeDatabase(target));
+        afterEach(closeAll);
+        after (() => removeDatabase(target));
 
         it('Create [migration] table', (t: it.TestContext) => {
-            const sqlite3 = new SQLite3Base(target);
+            const sqlite3 = open(target);
             const sqlite3Migrations = new SQLite3Migrations(sqlite3);
             sqlite3Migrations.runMigrations([]);
 
@@ -163,7 +174,7 @@ describe(
         });
 
         it('Execute migrations 1 and 2', (t: it.TestContext) => {
-            const sqlite3 = new SQLite3Base(target);
+            const sqlite3 = open(target);
             const sqlite3Migrations = new SQLite3Migrations(sqlite3);
             sqlite3Migrations.runMigrations([ migration1, migration2 ]);
 
@@ -178,7 +189,7 @@ describe(
         });
 
         it('Execute migrations 3 and 4 (and fails)', (t: it.TestContext) => {
-            const sqlite3 = new SQLite3Base(target);
+            const sqlite3 = open(target);
             const sqlite3Migrations = new SQLite3Migrations(sqlite3);
             
             try {
@@ -206,10 +217,10 @@ describe(
 
         it('A migration inserted before the last applied one still runs', (t: it.TestContext) => {
             const localTarget = './sqlite3.migrations-insert-before.db';
-            rmSync(localTarget, { force: true });
+            removeDatabase(localTarget);
 
             try {
-                let sqlite3 = new SQLite3Base(localTarget);
+                let sqlite3 = open(localTarget);
                 let sqlite3Migrations = new SQLite3Migrations(sqlite3);
                 sqlite3Migrations.runMigrations([ migration1, migration2 ]);
 
@@ -226,7 +237,7 @@ describe(
                     },
                 };
 
-                sqlite3 = new SQLite3Base(localTarget);
+                sqlite3 = open(localTarget);
                 sqlite3Migrations = new SQLite3Migrations(sqlite3);
                 sqlite3Migrations.runMigrations([ migration1, migration1_5, migration2 ]);
 
@@ -247,16 +258,17 @@ describe(
 
                 t.assert.strictEqual(exists, 1);
             } finally {
-                rmSync(localTarget, { force: true });
+                closeAll();
+                removeDatabase(localTarget);
             }
         });
 
         it('A renamed already-applied migration throws instead of skipping or re-running everything', (t: it.TestContext) => {
             const localTarget = './sqlite3.migrations-renamed.db';
-            rmSync(localTarget, { force: true });
+            removeDatabase(localTarget);
 
             try {
-                let sqlite3 = new SQLite3Base(localTarget);
+                let sqlite3 = open(localTarget);
                 let sqlite3Migrations = new SQLite3Migrations(sqlite3);
                 sqlite3Migrations.runMigrations([ migration1, migration2 ]);
 
@@ -265,7 +277,7 @@ describe(
                     execute: migration2.execute,
                 };
 
-                sqlite3 = new SQLite3Base(localTarget);
+                sqlite3 = open(localTarget);
                 sqlite3Migrations = new SQLite3Migrations(sqlite3);
 
                 t.assert.throws(
@@ -273,7 +285,8 @@ describe(
                     /Applied migration "migration2" is missing/
                 );
             } finally {
-                rmSync(localTarget, { force: true });
+                closeAll();
+                removeDatabase(localTarget);
             }
         });
     }

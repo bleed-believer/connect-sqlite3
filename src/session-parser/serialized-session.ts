@@ -15,8 +15,8 @@ export interface SerializedSession {
     signed: number | null;
     /** Cookie `secure` flag, stored as `'true'`, `'false'`, `'auto'`, or `null` when unset. */
     secure: string | null;
-    /** Cookie `expires` date, stored as an ISO string, or `null` when unset. */
-    expires: string | null;
+    /** Cookie `expires` date, in milliseconds since the epoch, or `null` when unset. */
+    expires: number | null;
     /** Cookie `httpOnly` flag, stored as `0`/`1`, or `null` when unset. */
     httpOnly: number | null;
     /** Cookie `sameSite` value, stored as its string/boolean JSON form, or `null` when unset. */
