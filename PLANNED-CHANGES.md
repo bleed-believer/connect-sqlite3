@@ -152,7 +152,42 @@ interface SQLite3StoreOptions {
   per host by nature.
 - Making the store asynchronous. `better-sqlite3` is synchronous by design.
   Each operation becomes a single indexed statement, so the time it blocks
-  the event loop is small.
+  the event loop is small. See "About an asynchronous store" below.
+
+### About an asynchronous store
+
+Switching to `node:sqlite` doesn't make the store asynchronous either. On
+Node 24 it only offers `DatabaseSync` and `StatementSync`. Its only function
+that returns a `Promise` is `backup()`, so every query still runs on the main
+thread, as with `better-sqlite3`.
+
+The only way to keep the queries off the event loop is to run SQLite in a
+`worker_thread`. The worker opens the database (with either library), and
+the main thread sends it each operation with `postMessage`. The public API
+wouldn't change, because `express-session` stores already use callbacks.
+
+It isn't worth it for this store yet:
+
+- **Cost.** After the changes above, `get` and `touch` are a single statement
+  on an index or the primary key and take a few microseconds. Sending a
+  message to a worker and getting the answer back, which copies the session
+  data both ways, usually costs more than that. Each request would take
+  longer in total, even though the main thread would be free.
+- **No parallelism.** SQLite allows a single writer at a time, so the worker
+  still runs the operations one after another. It only moves the work off
+  the main thread.
+- **What blocks today is something else.** It's the write transaction on
+  every call and the `fsync` of each commit with the default journal. WAL,
+  `synchronous = NORMAL` and reads without a transaction remove most of that
+  time.
+- **More to maintain.** The worker's lifecycle and errors, a `close()` that
+  also ends the worker, and the `Buffer` target, which would have to be
+  copied to the worker.
+
+After this work, measure the event loop delay under load (for example with
+`perf_hooks.monitorEventLoopDelay()`). If the blocking still shows, move to
+a worker, and use `node:sqlite` in it to drop the native dependency. Release
+that as its own breaking version, not as part of `0.2.0`.
 
 ## Release
 
